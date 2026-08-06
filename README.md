@@ -28,7 +28,8 @@ A single, self-contained HTML file that converts dice rolls into BIP39 mnemonic 
 
 ## ⚠️ Critical Compatibility Notice
 
-### This tool is NOT compatible with Coldcard or SeedSigner dice rolls.
+### Uses a different dice-to-entropy algorithm than COLDCARD and SeedSigner
+
 
 There are **two fundamentally different and incompatible** methods for converting dice rolls into BIP39 seed phrases. They produce **completely different seed words** from the same physical dice rolls. Neither is "wrong" — they are simply different standards.
 
