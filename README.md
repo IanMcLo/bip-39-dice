@@ -1,5 +1,4 @@
-                                       
-# 🎲 BIP39 Dice Generator
+     # 🎲 BIP39 Dice Generator
 
 > Generate Bitcoin BIP39 mnemonic seed phrases from physical dice rolls — offline, air-gapped, and verified.
 
@@ -14,16 +13,6 @@ A single, self-contained HTML file that converts dice rolls into BIP39 mnemonic 
 3. **Open** the file in your browser
 4. **Roll** your dice and enter the results
 5. **Generate** your seed phrase
-
-6. # 🎲 BIP39 Dice Generator
-
-> Generate Bitcoin BIP39 mnemonic seed phrases from physical dice rolls — offline, air-gapped, and verified.
-
-A single, self-contained HTML file that converts dice rolls into BIP39 mnemonic seed phrases using **standard base-6 entropy conversion**. Zero dependencies. Zero network calls. Works entirely in your browser.
-
----
-
-
 
 ---
 
@@ -173,7 +162,4 @@ These test vectors were cross-checked against iancoleman.io/bip39 using **Hex en
 ## 📜 License
 
 MIT — use at your own risk. This is security-critical software. Review the code, verify the test vectors, and only use on air-gapped devices.
-
-
----
-
+                           
