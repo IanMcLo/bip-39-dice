@@ -17,9 +17,10 @@ A single, self-contained HTML file that converts dice rolls into BIP39 mnemonic 
 
 ---
 
+
 # BIP39 Dice Roll Seed Generator
 
-![App interface](screenshot-input.png)
+![App interface](photos/screenshot-input.png)
 
 Generate cryptographically secure BIP39 seed phrases from physical dice rolls. Entropy never leaves your device.
 
@@ -30,17 +31,17 @@ Every output can be independently verified against the canonical reference.
 ### 1. Generate your mnemonic
 Roll your dice and enter the results. The tool derives a standard BIP39 word list.
 
-![24-word BIP39 mnemonic](screenshot-words.png)
+![24-word BIP39 mnemonic](photos/screenshot-words.png)
 
 ### 2. Inspect the raw entropy
 The raw 256-bit entropy is displayed in hexadecimal so you can verify it matches your dice rolls.
 
-![Raw entropy hex](screenshot-entropy.png)
+![Raw entropy hex](photos/screenshot-entropy.png)
 
 ### 3. Cross-check with the canonical implementation
 Paste the entropy into [Ian Coleman's BIP39 tool](https://iancoleman.io/bip39/). The word list and checksum match exactly.
 
-![Cross-verification with Ian Coleman BIP39](screenshot-stats.png)
+![Cross-verification with Ian Coleman BIP39](photos/screenshot-stats.png)
 
 > **Result:** Entropy `c4f25026...748b53f` → identical 24-word mnemonic on both tools.  
 > Your dice rolls, your entropy, your keys — verified.
