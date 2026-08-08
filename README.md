@@ -26,15 +26,15 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
 *Select your seed length, type dice rolls (space‑separated), and watch the live counter turn green when enough rolls are entered.*
 
 ### 2. Generated Seed Words  
-![Seed Words](photos/1000030239_7155937908293352994.webp)  
+![Seed Words](photos/screenshots-words.jpg)  
 *Your BIP39 mnemonic appears in a clean, numbered list for safe, easy transcription.*
 
 ### 3. Raw Entropy (Hex)  
-![Raw Entropy](photos/1000030240_8755626361116866278.webp)  
+![Raw Entropy](photos/screenshots-entropy.jpg)  
 *The pre‑checksum raw entropy is displayed in hexadecimal format for cross‑verification with external tools like iancoleman.io.*
 
 ### 4. Entropy Statistics  
-![Entropy Stats](photos/1000030238_6864118217419762822.webp)  
+![Entropy Stats](photos/screenshots-stats.jpg)  
 *Detailed metrics – total bits, average bits per roll, estimated time to crack, and raw entropy word count – give you full transparency into your seed strength.*
 
 ---
