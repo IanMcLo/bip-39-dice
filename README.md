@@ -36,7 +36,7 @@ Roll your dice and enter the results. The tool derives a standard BIP39 word lis
 ### 2. Inspect the raw entropy
 The raw 256-bit entropy is displayed in hexadecimal so you can verify it matches your dice rolls.
 
-![Raw entropy hex](photos/screenshot-entropy.png)
+![Raw entropy hex](photos/screenshot-entropy.jpg)
 
 ### 3. Cross-check with the canonical implementation
 Paste the entropy into [Ian Coleman's BIP39 tool](https://iancoleman.io/bip39/). The word list and checksum match exactly.
