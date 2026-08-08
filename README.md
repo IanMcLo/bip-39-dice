@@ -31,7 +31,7 @@ Every output can be independently verified against the canonical reference.
 ### 1. Generate your mnemonic
 Roll your dice and enter the results. The tool derives a standard BIP39 word list.
 
-![24-word BIP39 mnemonic](photos/screenshot-words.jpg)
+![15-word BIP39 mnemonic](photos/screenshot-words.jpg)
 
 ### 2. Inspect the raw entropy
 The raw 256-bit entropy is displayed in hexadecimal so you can verify it matches your dice rolls.
@@ -43,7 +43,7 @@ Paste the entropy into [Ian Coleman's BIP39 tool](https://iancoleman.io/bip39/).
 
 ![Cross-verification with Ian Coleman BIP39](photos/screenshot-stats.jpg)
 
-> **Result:** Entropy `c4f25026...748b53f` → identical 24-word mnemonic on both tools.  
+> **Result:** Entropy `43331885f4e66c1eab7b8f5629e3ce268969bb45` → identical 15-word mnemonic on both tools.  
 > Your dice rolls, your entropy, your keys — verified.
 
 ---
