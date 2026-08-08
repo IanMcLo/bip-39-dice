@@ -31,11 +31,11 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
 
 ### 3. Raw Entropy (Hex)  
 ![Raw Entropy](photos/screenshots-entropy.jpg)  
-*The pre‑checksum raw entropy is displayed in hexadecimal format for cross‑verification with external tools like iancoleman.io.*
+*The pre‑checksum raw entropy is displayed in hexadecimal format for cross‑verification with external tools.*
 
-### 4. Entropy Statistics  
-![Entropy Stats](photos/screenshots-stats.jpg)  
-*Detailed metrics – total bits, average bits per roll, estimated time to crack, and raw entropy word count – give you full transparency into your seed strength.*
+### 4. Cross‑Verification with Ian Coleman
+![Verification](photos/screenshots-stats.jpg)  
+*Paste the raw entropy into [Ian Coleman's BIP39 tool](https://iancoleman.io/bip39/) to confirm the derived mnemonic matches exactly. The stats panel confirms the entropy strength (e.g., 256 bits, centuries to crack) – your dice rolls, your entropy, your keys, verified.*
 
 ---
 
