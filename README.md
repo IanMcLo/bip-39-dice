@@ -102,7 +102,10 @@ Use this tool on an **air‑gapped** device only.
 ---
 
 ## 📝 Changelog
-
+### v1.0.7
+- Added full cryptographic wordlist integrity verification — on page load the generator SHA-256 hashes the entire 2048-word BIP39 array and compares it against a hard-coded canonical hash. This detects any added, deleted, or misspelled words in addition to the existing length, sortedness, and spot-check validations.
+- Updated `index.html.sha256` outer file checksum to match the modified `index.html`.
+- 
 ### v1.0.6
 - Fixed SHA-256 generation using the browser's native SHA-256 implementation
 - Corrected dice-to-entropy conversion using base-6 → base-256 conversion
