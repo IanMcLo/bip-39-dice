@@ -47,7 +47,8 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
 - **Multiple lengths** – 12, 15, 18, 21, or 24 words.  
 - **Live roll counter** – real‑time count with colour‑coded progress.  
 - **Entropy stats dashboard** – displays bit strength, time to crack, and average entropy per roll.  
-- **Wordlist integrity self‑test** – verifies the embedded BIP39 English wordlist (2048 words) on every load.  
+- **Wordlist integrity self-test** – cryptographically verifies the embedded BIP39 English wordlist (2048 words) via SHA-256 on every load.
+
 - **Copy‑to‑clipboard** – for both the mnemonic and raw entropy hex.  
 - **Hard reset button** – wipes DOM state and nullifies JavaScript variables.  
 - **Dark mode UI** – easy on the eyes during long dice‑rolling sessions.
