@@ -43,10 +43,10 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
 
 - **Single HTML file** – no build step, no dependencies, no external scripts.  
 - **Standard base‑6 conversion** – dice rolls treated as a base‑6 number (1→0, 2→1, …, 6→5).  
-- **Verified against Ian Coleman** – same rolls produce identical entropy and seed words.  
+  - **Verified against Ian Coleman** – pasting generated seed words produces identical entropy hex, account keys, and addresses.
+  - 
 - **Multiple lengths** – 12, 15, 18, 21, or 24 words.  
 - **Live roll counter** – real‑time count with colour‑coded progress.  
-- **Entropy stats dashboard** – displays bit strength, time to crack, and average entropy per roll.  
 - **Wordlist integrity self-test** – cryptographically verifies the embedded BIP39 English wordlist (2048 words) via SHA-256 on every load.
 
 - **Copy‑to‑clipboard** – for both the mnemonic and raw entropy hex.  
