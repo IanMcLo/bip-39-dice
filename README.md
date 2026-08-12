@@ -63,7 +63,7 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
    The integer is converted to bytes and truncated (or zero‑padded) to the required entropy length:
    - 12 words → 128 bits (16 bytes, ≈50 rolls)  
    - 15 words → 160 bits (20 bytes, ≈62 rolls)  
-   - 18 words → 192 bits (24 bytes, ≈74 rolls)  
+   - 18 words → 192 bits (24 bytes, ≈75 rolls)  
    - 21 words → 224 bits (28 bytes, ≈87 rolls)  
    - 24 words → 256 bits (32 bytes, ≈100 rolls)
 
