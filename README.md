@@ -111,10 +111,10 @@ Use this tool on an **air‑gapped** device only.
 
 **Important note on dice-roll compatibility:**
 
-This tool uses LSB (Least Significant Byte) ordering when converting dice rolls to entropy. This means:
+This tool treats the first recorded die roll as the most significant base-6 digit. The full roll sequence is interpreted as a single base-6 integer, then converted to a big-endian hex string padded to the required byte length.
 - ✅ Your **seed phrase** and **entropy hex** are always correct and verifiable.
 - ✅ Pasting the entropy hex into Ian Coleman's tool will reproduce your seed words.
-- ⚠️ If you re-enter the *same dice rolls* into a tool using MSB ordering (like Ian Coleman), you will get **different entropy** but the same **seed phrase verification method applies** — just compare the hex and mnemonic.
+ - ⚠️ Different tools may convert dice rolls to entropy using different methods. Always verify by comparing the **entropy hex** and resulting mnemonic, not by re-entering dice rolls into other tools. 
 
 **The core security principle:** Your seed phrase is valid and verifiable via the entropy hex, regardless of byte ordering. Always verify by checking the mnemonic against the entropy, not by re-rolling dice.
 
