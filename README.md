@@ -101,6 +101,25 @@ Use this tool on an **air‑gapped** device only.
 
 ---
 
+## ⚠️ Verification & Compatibility
+
+**How to verify your seed is correct:**
+
+1. Generate your mnemonic and copy the **raw entropy hex** (displayed below the seed words).
+2. Paste the hex into [Ian Coleman's BIP39 tool](https://iancoleman.io/bip39/).
+3. Confirm the **mnemonic words match exactly**.
+
+**Important note on dice-roll compatibility:**
+
+This tool uses LSB (Least Significant Byte) ordering when converting dice rolls to entropy. This means:
+- ✅ Your **seed phrase** and **entropy hex** are always correct and verifiable.
+- ✅ Pasting the entropy hex into Ian Coleman's tool will reproduce your seed words.
+- ⚠️ If you re-enter the *same dice rolls* into a tool using MSB ordering (like Ian Coleman), you will get **different entropy** but the same **seed phrase verification method applies** — just compare the hex and mnemonic.
+
+**The core security principle:** Your seed phrase is valid and verifiable via the entropy hex, regardless of byte ordering. Always verify by checking the mnemonic against the entropy, not by re-rolling dice.
+
+---
+
 ## 📝 Changelog
 ### v1.0.7
 - Added full cryptographic wordlist integrity verification — on page load the generator SHA-256 hashes the entire 2048-word BIP39 array and compares it against a hard-coded canonical hash. This detects any added, deleted, or misspelled words in addition to the existing length, sortedness, and spot-check validations.
