@@ -113,16 +113,13 @@ Security note: the extracted seed's security cannot exceed the entropy in the or
 
 ---
 
-## 6. Worked Example — 12 words (LSB mode)
+## 6. Worked Example — 12 words (LSB mode, trivial)
 
-This worked example demonstrates how a recorded dice sequence maps to raw entropy hex and a BIP‑39 mnemonic under the project's LSB ordering. For clarity we use a canonical BIP‑39 test vector for the final mnemonic; the important point is the mapping pipeline and verification steps.
+This worked example demonstrates how a recorded dice sequence maps to raw entropy hex and a BIP‑39 mnemonic under the project's LSB ordering. For clarity we previously used the all‑zero entropy example which is canonical.
 
-Steps:
+Steps (trivial):
 
-1. Dice rolls (example):
-   - Binary mapping example (simple view): 128 rolls of "1" (i.e., all rolls in {1,2,3}) produce 128 zero bits under the 1→0,2→0,3→0,4→1,5→1,6→1 mapping.
-   - Base‑6 LSB encoding example (implementation): 128 rolls of "1" map to base‑6 digits all 0, so the base‑6 integer value is 0.
-
+1. Dice rolls (example): 128 rolls of "1" (i.e., all rolls in {1,2,3}) produce 128 zero bits under the 1→0,2→0,3→0,4→1,5→1,6→1 mapping.
 2. Raw entropy bytes (implementation LSB mode): the integer value 0 → 16 bytes of 0x00 → raw entropy hex:
 
    00000000000000000000000000000000
@@ -135,9 +132,46 @@ Steps:
 
 5. Verification (recommended): paste the raw entropy hex above into Ian Coleman's BIP‑39 tool and confirm the mnemonic matches.
 
-Notes:
-- The example uses the trivial all‑zeros entropy to make the mapping unambiguous; any other roll sequence may be used and verified identically by comparing the produced raw entropy hex against an external tool.
-- For non‑trivial examples, record the exact roll sequence and verify the displayed raw entropy hex by pasting into an external BIP‑39 tool.
+---
+
+## 7. Worked Example — 12 words (LSB mode, non‑trivial)
+
+Below is a compact, non‑trivial example that exercises the LSB conversion path. This example intentionally uses a small numeric value to keep intermediate representations short and human‑readable while still demonstrating the full pipeline.
+
+Example parameters:
+- Target: 12‑word mnemonic (E = 128 bits, 16 bytes)
+- Rolls recorded (LSB ordering): 50 rolls (first recorded roll is least‑significant base‑6 digit)
+
+Roll sequence (first = LSB):
+
+1. 4, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+2. 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+3. 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+
+Explanation:
+- Map rolls to base‑6 digits (digit = roll − 1). The first two rolls produce digits [3, 2], all remaining rolls produce digit 0.
+- Base‑6 integer value (N):
+
+  N = 3 * 6^0 + 2 * 6^1 + 0 * 6^2 + ... + 0 * 6^49 = 3 + 12 = 15
+
+- Convert N to a 16‑byte little‑endian byte array (LSB‑first bytes). The 128‑bit representation with little‑endian byte ordering is:
+
+  Bytes (hex, LSB first): 0f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+  Displayed raw entropy hex (implementation shows bytes in LSB byte order):
+
+  0f000000000000000000000000000000
+
+- Checksum: compute Digest = SHA‑256(raw_entropy_bytes). Take the first CS = 4 bits of Digest as the checksum and append to the 128‑bit raw entropy to form the 132‑bit stream S.
+
+- Word indices: split S into 11‑bit MSB‑first chunks and map each integer to the BIP‑39 English wordlist to obtain the 12 mnemonic words.
+
+Practical verification (recommended):
+1. Using the raw entropy hex above (0f0000...00), paste it into Ian Coleman's BIP‑39 tool (or use a local SHA‑256 + bit‑slice script) and confirm the resulting 12‑word mnemonic. The implementation will display the same raw entropy hex and mnemonic; match both to verify correctness.
+
+Notes on this example:
+- This example uses a low numeric value (N = 15) for readability. In practice, use full‑entropy roll sequences (≈50 dice rolls for 12 words) with high variance.
+- The key point is the pipeline: recorded rolls → base‑6 digits (LSB) → little‑endian byte array → raw entropy hex → SHA‑256 checksum → 11‑bit indexes → mnemonic.
 
 ---
 
