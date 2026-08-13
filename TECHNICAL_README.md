@@ -1,6 +1,6 @@
 # Technical & Cryptographic Specification
 
-This document describes the information‑theoretic foundations, entropy bounds, framing pipeline, and security model of the `bip-39-dice` physical seed generator. It is intended as a precise, implementation‑level specification for reviewers and auditors.
+This document describes the information‑theoretic foundations, entropy bounds, framing pipeline, and security model of the `bip-39-dice` physical seed generator. It is intended as a precise, implementable reference for auditors and advanced users.
 
 ---
 
@@ -29,7 +29,7 @@ $$
 
 Because Shannon entropy and min‑entropy are equal under p = 0.5, each mapped roll contributes one full bit of entropy in both average and worst‑case senses prior to software processing.
 
-Note: This binary mapping is for entropy accounting and statistical analysis. The generator also supports base‑6 encoding of rolls (1→0, 2→1, …, 6→5) for constructing raw entropy by treating the roll sequence as a base‑6 integer; see the implementation for that conversion path.
+Note: This binary mapping is for entropy accounting and statistical analysis. The generator also supports base‑6 encoding of rolls (1→0, 2→1, …, 6→5) for constructing raw entropy by treating runs of rolls as base‑6 digits and converting to a fixed‑length byte array.
 
 ---
 
@@ -60,13 +60,13 @@ Concatenate the raw entropy bitstring and the checksum bits to form the full bit
 Cryptographic note: SHA‑256 is used only to compute deterministic checksum bits; it does not increase the min‑entropy of the raw E‑bit sequence. The attacker's search space is bounded by 2^E.
 
 ### 2.3 11‑bit Word Indices
-Partition S into contiguous 11‑bit chunks and interpret each chunk in MSB‑first order to produce the BIP‑39 word indices (this is the standard BIP‑39 interpretation). Formally, for k = 0, 1, …, (L/11) − 1:
+Partition S into contiguous 11‑bit chunks and interpret each chunk in MSB‑first order to produce the BIP‑39 word indices (this is the standard BIP‑39 interpretation). Formally, for k = 0, 1, …:
 
 $$W_k = \sum_{i=0}^{10} S[11k + i] \times 2^{10-i}\ ,$$
 
 where W_k is the integer value of the k‑th 11‑bit block in MSB‑first bit ordering. Each W_k ∈ [0, 2047] indexes the BIP‑39 English wordlist.
 
-Implementation caveat: the bitstream S is constructed from the raw entropy bytes using the implementation's byte ordering (LSB byte ordering when converting dice rolls to bytes). That means the sequence of bits in S may differ from a big‑endian construction of the same numeric value; the important invariant is consistency between: the displayed raw entropy hex, the computed checksum, and the generated mnemonic. For interoperability, always verify by pasting the displayed entropy hex into external tools (e.g., Ian Coleman) — the hex string is the canonical artifact to compare.
+Implementation caveat: the bitstream S is constructed from the raw entropy bytes using the implementation's byte ordering (LSB byte ordering when converting dice rolls to bytes). That means the sequence of bits used to form 11‑bit words depends on how rolls are packed into bytes. Always verify using the displayed raw entropy hex.
 
 ---
 
@@ -86,7 +86,7 @@ $$\sigma = \sqrt{160 \times 0.5 \times 0.5} = \sqrt{40} \approx 6.3246.$$
 Observing 82 ones corresponds to z = (82 − 80)/σ ≈ 0.316, well within typical statistical fluctuation and not evidence of reduced entropy.
 
 ### 3.2 Byte‑Level Sampling Artifacts
-When viewing N = 20 bytes (160 bits) as 8‑bit symbols, the maximum empirical frequency for a distinct byte value is 1/20 = 0.05 if all bytes are distinct. A naive calculation using that per‑byte frequency yields a low bound on empirical min‑entropy at the byte resolution; however, this is an artefact of the coarse (8‑bit symbol) sampling and small N. The true bitwise security remains governed by E (for example, 2^160 for 160 bits).
+When viewing N = 20 bytes (160 bits) as 8‑bit symbols, the maximum empirical frequency for a distinct byte value is 1/20 = 0.05 if all bytes are distinct. A naive calculation using that per‑byte frequency as if bytes were independent symbols can under‑estimate entropy for short samples.
 
 Practical recommendation: use bitwise statistics or aggregate many samples before inferring entropy degradation.
 
@@ -113,6 +113,53 @@ Security note: the extracted seed's security cannot exceed the entropy in the or
 
 ---
 
+## Threat Model & Operational Security
+
+This section summarises the physical and operational assumptions made by the generator and gives concise guidance for safe use.
+
+- Assumptions: the generator assumes dice are rolled by an honest operator in a physically private environment and that the recording medium (paper or device) is under the operator's control during generation. The document does not assume the operator's environment is free of all risks — instead it documents mitigations for common physical threats.
+- Threats considered: shoulder‑surfing or covert recording, biased or tampered dice, accidental leakage via networked devices, and operator error when re‑entering or transferring entropy/mnemonic data.
+- Operational recommendations:
+  - Roll and record in private; remove cameras, disable microphones, and avoid network‑connected devices in the immediate area while generating entropy.
+  - Use standard, undamaged dice from a reliable source. If in doubt, perform quick chi‑square checks on a sample of rolls or use multiple dice and aggregate results.
+  - Prefer an air‑gapped computer for converting rolls to entropy or use paper (and an offline reproducible script) to reduce attack surface. If a device is used, verify the binary or HTML artifact's checksums prior to use.
+  - Do not paste raw entropy or the mnemonic into online web pages or networked tools. When verification against third‑party tools is required, transfer only the raw entropy hex using an offline method (QR printed on paper, air‑gap USB) and verify on an independent, air‑gapped machine.
+  - Treat raw entropy hex and the mnemonic as highly sensitive. Avoid copying them to clipboards on networked systems; clear and destroy intermediate paper records only after secure transfer if required.
+- Out of scope: supply‑chain compromises of cryptographic libraries, OS‑level compromise of the recording device, and coercion attacks against the operator.
+
+---
+
+## Common Pitfalls and How to Avoid Them
+
+- Re‑typing dice rolls into other tools: always verify by using the displayed raw entropy hex rather than re‑typing roll sequences into third‑party tools.
+- Byte/bit ordering mismatch: this project uses LSB byte ordering for conversion of base‑6 sequences to bytes. Other tools may use MSB ordering. Use the displayed hex when cross‑checking.
+- Confusing encodings: binary mapping (1–3 → 0, 4–6 → 1) used for bit accounting is distinct from base‑6 digit mapping (digit = roll − 1). Ensure you use the correct mapping for the intended conversion path.
+- Insufficient sample size: collecting too few rolls produces noisy empirical statistics and may leave you short of required entropy. For 12 words prefer ~50 rolls (base‑6) or 128 rolls if using the binary mapping.
+- Exposing the mnemonic: never paste the mnemonic into networked web pages. Use local, audited tools for any additional verification.
+
+---
+
+## Trusted Code Base & Audit Checklist
+
+For auditors and advanced users, verify the following before using this tool in a threat‑sensitive workflow:
+
+- Identify the implementation files for entropy collection and conversion (dice parsing, base‑6 → big integer, integer → byte array, checksum, and word slicing). Confirm these are the only code paths used during generation.
+- Confirm the sources and versions of cryptographic primitives (Web Crypto API, and the name/version of any bundled pure‑JS SHA‑256 implementation). Prefer native, well‑maintained libraries.
+- Specify acceptable runtime environments (e.g., offline browser via file://, Node.js in an air‑gapped machine) and document any environment caveats.
+- Reproducible builds: publish artifact checksums and provide build instructions so auditors can reproduce release artifacts and verify integrity.
+
+Suggested audit checklist:
+
+- [ ] Confirm the implementation files for dice → entropy → hex → mnemonic and list their paths.
+- [ ] Confirm SHA‑256 and PBKDF2 implementations and their origins/versions.
+- [ ] Reproduce the worked examples in an air‑gapped environment using the provided build.
+- [ ] Verify there are no network calls, telemetry, or remote loading in the artifact used for generation.
+- [ ] Verify release artifact checksums/signatures.
+
+If you would like, we can populate the "implementation files" list automatically by enumerating the repository source files and flagging likely candidates (e.g., index.html functions). Ask me to do that and I will add the file list.
+
+---
+
 ## 6. Worked Example — 12 words (LSB mode, trivial)
 
 This worked example demonstrates how a recorded dice sequence maps to raw entropy hex and a BIP‑39 mnemonic under the project's LSB ordering. For clarity we previously used the all‑zero entropy example which is canonical.
@@ -136,7 +183,7 @@ Steps (trivial):
 
 ## 7. Worked Example — 12 words (LSB mode, non‑trivial)
 
-Below is a compact, non‑trivial example that exercises the LSB conversion path. This example intentionally uses a small numeric value to keep intermediate representations short and human‑readable while still demonstrating the full pipeline.
+Below is a compact, non‑trivial example that exercises the LSB conversion path. This example intentionally uses a small numeric value to keep intermediate representations short and human‑readable.
 
 Example parameters:
 - Target: 12‑word mnemonic (E = 128 bits, 16 bytes)
@@ -167,11 +214,17 @@ Explanation:
 - Word indices: split S into 11‑bit MSB‑first chunks and map each integer to the BIP‑39 English wordlist to obtain the 12 mnemonic words.
 
 Practical verification (recommended):
-1. Using the raw entropy hex above (0f0000...00), paste it into Ian Coleman's BIP‑39 tool (or use a local SHA‑256 + bit‑slice script) and confirm the resulting 12‑word mnemonic. The implementation will display the same raw entropy hex and mnemonic; match both to verify correctness.
+1. Using the raw entropy hex above (0f0000...00), paste it into Ian Coleman's BIP‑39 tool (or use a local SHA‑256 + bit‑slice script) and confirm the resulting 12‑word mnemonic.
 
 Notes on this example:
 - This example uses a low numeric value (N = 15) for readability. In practice, use full‑entropy roll sequences (≈50 dice rolls for 12 words) with high variance.
 - The key point is the pipeline: recorded rolls → base‑6 digits (LSB) → little‑endian byte array → raw entropy hex → SHA‑256 checksum → 11‑bit indexes → mnemonic.
+
+---
+
+## High‑variance worked example (optional)
+
+For readers who would prefer to see a fully worked, high‑variance example (realistic distribution of rolls producing full‑entropy 16‑byte values), we can add a concrete roll list with intermediate numeric values, the computed raw entropy hex, SHA‑256 checksum bits, and the resulting 12‑word mnemonic. If you would like this included in the README, ask me to generate it and I will append the full numeric example.
 
 ---
 
