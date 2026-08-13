@@ -116,7 +116,7 @@ This tool treats the first recorded die roll as the most significant base-6 digi
 - ✅ Pasting the entropy hex into Ian Coleman's tool will reproduce your seed words.
  - ⚠️ Different tools may convert dice rolls to entropy using different methods. Always verify by comparing the **entropy hex** and resulting mnemonic, not by re-entering dice rolls into other tools. 
 
-**The core security principle:** Your seed phrase is valid and verifiable via the entropy hex, regardless of byte ordering. Always verify by checking the mnemonic against the entropy, not by re-rolling dice.
+**The core security principle:** Your seed phrase is valid and independently verifiable from the displayed entropy hex. Different dice-conversion conventions may produce different entropy from the same rolls, so always verify the entropy hex and resulting mnemonic rather than re-entering the rolls into another tool.
 
 ---
 
