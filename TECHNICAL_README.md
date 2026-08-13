@@ -1,84 +1,121 @@
 # Technical & Cryptographic Specification
 
-This document details the information-theoretic foundations, entropy bounds, framing pipeline, and security model of the `bip-39-dice` physical seed generator.
+This document describes the information‑theoretic foundations, entropy bounds, framing pipeline, and security model of the `bip-39-dice` physical seed generator. It is intended as a precise, implementation‑level specification for reviewers and auditors.
 
 ---
 
-## 1. Information-Theoretic Foundations
+## 1. Information‑Theoretic Foundations
 
-### 1.1 Physical Entropy Source & Bernoulli Mapping
-Entropy generation relies on physical 6-sided dice rolls mapped to binary digits:
+### 1.1 Physical Entropy Source and Bernoulli Mapping
+The physical entropy source is repeated independent rolls of a fair six‑sided die. For the purposes of estimating binary entropy, we map each roll to one bit using a simple partition:
 
-$$\text{Roll} \in \{1, 2, 3\} \rightarrow 0 \quad | \quad \text{Roll} \in \{4, 5, 6\} \rightarrow 1$$
+- Roll ∈ {1, 2, 3} → 0
+- Roll ∈ {4, 5, 6} → 1
 
-Under the assumption of an unbiased die, each roll represents an independent and identically distributed (i.i.d.) Bernoulli trial with probability $p = 0.5$.
+Under the fair‑die assumption this produces independent and identically distributed (i.i.d.) Bernoulli trials with p = 0.5.
 
-* **Shannon Entropy ($H$):** Measures average uncertainty per trial.
-  $$H(X) = - \sum_{i=1}^{n} P(x_i) \log_2 P(x_i) = - (0.5 \log_2 0.5 + 0.5 \log_2 0.5) = 1.00 \text{ bit/roll}$$
+Shannon entropy per roll:
 
-* **Min-Entropy ($H_\infty$):** Measures worst-case predictability (the probability of guessing the output on the first attempt).
-  $$H_\infty(X) = -\log_2 \left( \max_i P(x_i) \right) = -\log_2(0.5) = 1.00 \text{ bit/roll}$$
+$$
+H(X) = -\sum_{x \in \{0,1\}} P(X=x) \log_2 P(X=x)
+     = -\bigl(0.5\log_2 0.5 + 0.5\log_2 0.5\bigr) = 1.00\ \text{bit/roll}.
+$$
 
-Because $H(X) = H_\infty(X) = 1.00$, the physical entropy source achieves maximum uniform min-entropy prior to software ingestion.
+Min‑entropy per roll (worst‑case single‑trial predictability):
 
----
+$$
+H_{\infty}(X) = -\log_2\bigl(\max_x P(X=x)\bigr) = -\log_2(0.5) = 1.00\ \text{bit/roll}.
+$$
 
-## 2. Framing, Checksum & Word Slicing
+Because Shannon entropy and min‑entropy are equal under p = 0.5, each mapped roll contributes one full bit of entropy in both average and worst‑case senses prior to software processing.
 
-### 2.1 Bitstream Framing
-BIP-39 demands raw entropy bit lengths ($E$) that are multiples of 32 bits. The required dice rolls ($N_{\text{rolls}}$) directly match the raw entropy requirement:
-
-| Target Mnemonic | Raw Entropy Bits ($E$) | Checksum Bits ($CS = E / 32$) | Total Bitstream ($E + CS$) |
-| :--- | :--- | :--- | :--- |
-| **12 Words** | 128 bits | 4 bits | 132 bits |
-| **15 Words** | 160 bits | 5 bits | 165 bits |
-| **24 Words** | 256 bits | 8 bits | 264 bits |
-
-### 2.2 SHA-256 Checksum Derivation
-The trailing checksum bits are computed deterministically over the raw byte sequence:
-
-$$\text{Digest} = \text{SHA-256}(\text{Raw Entropy})$$
-
-$$\text{Checksum} = \text{Digest} \left[ 0 : \frac{E}{32} \right]$$
-
-#### Cryptographic Independence
-Because SHA-256 is collision-resistant and preimage-resistant, appending $CS$ bits calculated from the raw entropy array does not increase or decrease the underlying min-entropy $H_\infty$ of the raw $E$-bit sequence. The effective key space for an attacker remains bounded by $2^E$.
-
-### 2.3 Dictionary Slicing
-The concatenated binary sequence $S = \text{Raw Entropy} \mathbin{\Vert} \text{Checksum}$ of length $L = E + CS$ is partitioned into 11-bit chunks:
-
-$$W_k = S[11k : 11(k+1) - 1] \quad \text{for } k \in \left[0, \frac{L}{11} - 1\right]$$
-
-Each 11-bit integer $W_k \in [0, 2047]$ maps directly to an index in the standard BIP-39 English word list.
+Note: This binary mapping is for entropy accounting and statistical analysis. The generator also supports base‑6 encoding of rolls (1→0, 2→1, …, 6→5) for constructing raw entropy by treating the roll sequence as a base‑6 integer; see the implementation for that conversion path.
 
 ---
 
-## 3. Empirical vs. Theoretical Min-Entropy Analysis
+## 2. Framing, Checksum and Word Slicing
 
-When evaluating generated hex strings via empirical statistical methods, resolution size introduces sampling artifacts that must be distinguished from true entropy loss:
+### 2.1 Raw Entropy Lengths
+BIP‑39 requires raw entropy lengths E that are multiples of 32 bits. Standard choices and corresponding checksum lengths are:
 
-### 3.1 Single-Bit Empirical Variance
-For a 160-bit raw entropy string, the expected number of ones in a fair coin-toss model is $\mu = 80$ with standard deviation $\sigma = \sqrt{160 \cdot 0.25} \approx 6.32$. 
+| Mnemonic Length | Raw Entropy E | Checksum bits CS = E / 32 | Total bits (E + CS) |
+|---:|---:|---:|---:|
+| 12 words | 128 | 4 | 132 |
+| 15 words | 160 | 5 | 165 |
+| 18 words | 192 | 6 | 198 |
+| 21 words | 224 | 7 | 231 |
+| 24 words | 256 | 8 | 264 |
 
-A sample showing 82 ones and 78 zeros lies within $0.32\sigma$ of the mean:
-$$p_{\max} = \frac{82}{160} = 0.5125$$
-$$H_{\infty, \text{empirical}} = 160 \times (-\log_2 0.5125) \approx 154.30 \text{ bits}$$
+### 2.2 Checksum Derivation (SHA‑256)
+Compute the SHA‑256 digest over the raw entropy byte array (big‑endian byte order for the digest computation as usual):
 
-This minor variance reflects expected binning behavior of a single sample, not a weakness in the key space.
+$$\text{Digest} = \mathrm{SHA\mbox{-}256}(\mathrm{RawEntropy\_bytes}).$$
 
-### 3.2 Byte-Level Sampling Limitations
-Evaluating a short sequence (e.g., $N = 20$ bytes) at an 8-bit resolution yields a maximum possible empirical frequency of $p_{\max} = 1/20 = 0.05$ for all distinct bytes:
+Take the first CS bits of the Digest as the checksum bits (that is, the most significant bits of the digest stream):
 
-$$H_{\infty, \text{byte}} = 20 \times (-\log_2 0.05) \approx 86.44 \text{ bits}$$
+$$\text{Checksum} = \mathrm{Digest}[0 : CS - 1].$$
 
-This figure is a mathematical lower-bound artifact of small sample size ($N=20$), not a reduction in true security. The full security margin remains $2^{160}$.
+Concatenate the raw entropy bitstring and the checksum bits to form the full bitstream S of length L = E + CS.
+
+Cryptographic note: SHA‑256 is used only to compute deterministic checksum bits; it does not increase the min‑entropy of the raw E‑bit sequence. The attacker's search space is bounded by 2^E.
+
+### 2.3 11‑bit Word Indices
+Partition S into contiguous 11‑bit chunks (most‑significant‑bit first within S):
+
+For k = 0, 1, …, (L/11) − 1,
+
+$$W_k = \sum_{i=0}^{10} S[11k + i] \times 2^{10-i}\ ,$$
+
+where W_k is the integer value of the k‑th 11‑bit block in big‑endian bit ordering. Each W_k ∈ [0, 2047] indexes the BIP‑39 English wordlist.
+
+(Equivalently: split S into 11‑bit words, interpret each 11‑bit block as an unsigned integer using MSB‑first bit ordering.)
 
 ---
 
-## 4. Downstream Key Derivation Architecture
+## 3. Empirical vs. Theoretical Min‑Entropy
 
-This tool generates the raw BIP-39 mnemonic phrase and verifies checksum consistency. Upon importing the generated phrase into standard wallet software (e.g., Electrum, Eternl, Coldcard):
+Short sample sizes and the chosen measurement resolution can create apparent reductions in empirical min‑entropy that do not reflect a true loss of cryptographic strength.
 
-1. **Key Stretching (PBKDF2):** The phrase is converted into a uniform 512-bit master seed using standard key derivation:
-   $$\text{Seed} = \text{PBKDF2-HMAC-SHA512}(\text{Mnemonic}, \text{"mnemonic"} + \text{Passphrase}, 2048, 512)$$
-2. **Randomness Extraction:** The PRF construction acts as a randomness extractor, smoothing any minor statistical non-uniformities in the raw physical sequence into uniform pseudorandom keying material.
+### 3.1 Single‑Bit Variance Example (160 bits)
+A uniformly random 160‑bit string has expected number of ones
+
+$$\mu = 160 \times 0.5 = 80$$
+
+and standard deviation
+
+$$\sigma = \sqrt{160 \times 0.5 \times 0.5} = \sqrt{40} \approx 6.3246.$$
+
+Observing 82 ones corresponds to z = (82 − 80)/σ ≈ 0.316, well within typical statistical fluctuation and not evidence of reduced entropy.
+
+### 3.2 Byte‑Level Sampling Artifacts
+When viewing N = 20 bytes (160 bits) as 8‑bit symbols, the maximum empirical frequency for a distinct byte value is 1/20 = 0.05 if all bytes are distinct. A naive calculation using that per‑byte frequency yields a low bound on empirical min‑entropy at the byte resolution; however, this is an artefact of the coarse (8‑bit symbol) sampling and small N. The true bitwise security remains governed by E (for example, 2^160 for 160 bits).
+
+Practical recommendation: use bitwise statistics or aggregate many samples before inferring entropy degradation.
+
+---
+
+## 4. Downstream Key‑Derivation Architecture
+
+After generating and verifying the mnemonic, standard wallet software expands the mnemonic into a seed using PBKDF2‑HMAC‑SHA512 as specified by BIP‑39:
+
+$$\mathrm{Seed} = \mathrm{PBKDF2\mbox{-}HMAC\mbox{-}SHA512}(\mathrm{Mnemonic},\ "mnemonic" \mathbin{\Vert} \mathrm{Passphrase},\ 2048,\ 512)$$
+
+This KDF both stretches and mixes the mnemonic (and optional passphrase), producing 512 bits of master seed material used by downstream HD key derivation (BIP‑32, etc.). Because PBKDF2 is a pseudorandom function keyed by the mnemonic, it acts as a randomness extractor: small, non‑adversarial statistical biases in the input are reduced by the PRF construction.
+
+Security note: the extracted seed's security cannot exceed the entropy in the original mnemonic; thus the dominant security parameter is the raw entropy length E.
+
+---
+
+## 5. Implementation & Interoperability Notes
+
+- Byte ordering: this specification uses big‑endian ordering for digest and bitstream interpretation when constructing the checksum and 11‑bit blocks. The implementation documents the exact byte and bit ordering used; verify when cross‑checking with third‑party tools.
+- Alternative roll encodings (base‑6) are supported: when rolls are encoded as base‑6 digits and converted to bytes, ensure the same endian interpretation is used when verifying entropy hex with external tools.
+- All deterministic cryptographic primitives should be called from well‑tested libraries (Web Crypto API in browsers, with a pure‑JS fallback only for audited offline use).
+
+---
+
+## Acknowledgements & References
+
+- BIP‑39: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
+- Ian Coleman BIP39 tool: https://iancoleman.io/bip39/
+- SHA‑256, PBKDF2 specifications (NIST and RFC references)
