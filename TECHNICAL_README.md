@@ -156,8 +156,6 @@ Suggested audit checklist:
 - [ ] Verify there are no network calls, telemetry, or remote loading in the artifact used for generation.
 - [ ] Verify release artifact checksums/signatures.
 
-If you would like, we can populate the "implementation files" list automatically by enumerating the repository source files and flagging likely candidates (e.g., index.html functions). Ask me to do that and I will add the file list.
-
 ---
 
 ## 6. Worked Example — 12 words (LSB mode, trivial)
@@ -219,15 +217,7 @@ Practical verification (recommended):
 Notes on this example:
 - This example uses a low numeric value (N = 15) for readability. In practice, use full‑entropy roll sequences (≈50 dice rolls for 12 words) with high variance.
 - The key point is the pipeline: recorded rolls → base‑6 digits (LSB) → little‑endian byte array → raw entropy hex → SHA‑256 checksum → 11‑bit indexes → mnemonic.
-
 ---
-
-## High‑variance worked example (optional)
-
-For readers who would prefer to see a fully worked, high‑variance example (realistic distribution of rolls producing full‑entropy 16‑byte values), we can add a concrete roll list with intermediate numeric values, the computed raw entropy hex, SHA‑256 checksum bits, and the resulting 12‑word mnemonic. If you would like this included in the README, ask me to generate it and I will append the full numeric example.
-
----
-
 ## Acknowledgements & References
 
 - BIP‑39: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
