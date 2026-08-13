@@ -47,7 +47,7 @@ BIP‑39 requires raw entropy lengths E that are multiples of 32 bits. Standard 
 | 24 words | 256 | 8 | 264 |
 
 ### 2.2 Checksum Derivation (SHA‑256)
-Compute the SHA‑256 digest over the raw entropy byte array (big‑endian byte order for the digest computation as usual):
+Compute the SHA‑256 digest over the raw entropy byte array as produced by the implementation (see Implementation notes on byte ordering):
 
 $$\text{Digest} = \mathrm{SHA\mbox{-}256}(\mathrm{RawEntropy\_bytes}).$$
 
@@ -60,15 +60,13 @@ Concatenate the raw entropy bitstring and the checksum bits to form the full bit
 Cryptographic note: SHA‑256 is used only to compute deterministic checksum bits; it does not increase the min‑entropy of the raw E‑bit sequence. The attacker's search space is bounded by 2^E.
 
 ### 2.3 11‑bit Word Indices
-Partition S into contiguous 11‑bit chunks (most‑significant‑bit first within S):
-
-For k = 0, 1, …, (L/11) − 1,
+Partition S into contiguous 11‑bit chunks and interpret each chunk in MSB‑first order to produce the BIP‑39 word indices (this is the standard BIP‑39 interpretation). Formally, for k = 0, 1, …, (L/11) − 1:
 
 $$W_k = \sum_{i=0}^{10} S[11k + i] \times 2^{10-i}\ ,$$
 
-where W_k is the integer value of the k‑th 11‑bit block in big‑endian bit ordering. Each W_k ∈ [0, 2047] indexes the BIP‑39 English wordlist.
+where W_k is the integer value of the k‑th 11‑bit block in MSB‑first bit ordering. Each W_k ∈ [0, 2047] indexes the BIP‑39 English wordlist.
 
-(Equivalently: split S into 11‑bit words, interpret each 11‑bit block as an unsigned integer using MSB‑first bit ordering.)
+Implementation caveat: the bitstream S is constructed from the raw entropy bytes using the implementation's byte ordering (LSB byte ordering when converting dice rolls to bytes). That means the sequence of bits in S may differ from a big‑endian construction of the same numeric value; the important invariant is consistency between: the displayed raw entropy hex, the computed checksum, and the generated mnemonic. For interoperability, always verify by pasting the displayed entropy hex into external tools (e.g., Ian Coleman) — the hex string is the canonical artifact to compare.
 
 ---
 
@@ -108,9 +106,38 @@ Security note: the extracted seed's security cannot exceed the entropy in the or
 
 ## 5. Implementation & Interoperability Notes
 
-- Byte ordering: this specification uses big‑endian ordering for digest and bitstream interpretation when constructing the checksum and 11‑bit blocks. The implementation documents the exact byte and bit ordering used; verify when cross‑checking with third‑party tools.
-- Alternative roll encodings (base‑6) are supported: when rolls are encoded as base‑6 digits and converted to bytes, ensure the same endian interpretation is used when verifying entropy hex with external tools.
+- Byte/bit ordering: the implementation uses LSB (least‑significant‑byte) ordering when converting dice rolls (or base‑6 digit sequences) to a raw entropy byte array. Within each byte, bits are presented in the conventional MSB‑first bit order when forming the bitstream S for checksum and word slicing. In short: roll sequence → LSB-first bytes → bytes' bits read MSB‑first to form S. This hybrid choice was made for implementation simplicity and to match the original project's entropy hex output. Always rely on the displayed entropy hex for cross‑verification.
+- Verification: when verifying with third‑party tools (e.g., Ian Coleman), paste the displayed raw entropy hex — this hex reflects the exact byte ordering used by the implementation. Re‑entering the raw dice rolls into tools that assume a different roll‑to‑byte ordering (MSB versus LSB) will produce a different entropy value; that is expected and does not indicate an error so long as the entropy hex matches.
+- Alternative roll encodings (base‑6): supported. If you convert rolls to a big integer in base‑6, document whether the first roll is treated as the least‑significant digit or most‑significant digit — this project treats the first recorded roll as contributing to the least‑significant digit when using LSB mode.
 - All deterministic cryptographic primitives should be called from well‑tested libraries (Web Crypto API in browsers, with a pure‑JS fallback only for audited offline use).
+
+---
+
+## 6. Worked Example — 12 words (LSB mode)
+
+This worked example demonstrates how a recorded dice sequence maps to raw entropy hex and a BIP‑39 mnemonic under the project's LSB ordering. For clarity we use a canonical BIP‑39 test vector for the final mnemonic; the important point is the mapping pipeline and verification steps.
+
+Steps:
+
+1. Dice rolls (example):
+   - Binary mapping example (simple view): 128 rolls of "1" (i.e., all rolls in {1,2,3}) produce 128 zero bits under the 1→0,2→0,3→0,4→1,5→1,6→1 mapping.
+   - Base‑6 LSB encoding example (implementation): 128 rolls of "1" map to base‑6 digits all 0, so the base‑6 integer value is 0.
+
+2. Raw entropy bytes (implementation LSB mode): the integer value 0 → 16 bytes of 0x00 → raw entropy hex:
+
+   00000000000000000000000000000000
+
+3. Checksum & concatenation: compute SHA‑256 over the raw entropy bytes and take the first CS = 4 bits (for 12 words). Concatenate to form the 132‑bit stream S.
+
+4. Word indices and mnemonic: splitting S into 11‑bit words and mapping to the BIP‑39 English wordlist produces the standard BIP‑39 test vector mnemonic for the all‑zero entropy:
+
+   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+
+5. Verification (recommended): paste the raw entropy hex above into Ian Coleman's BIP‑39 tool and confirm the mnemonic matches.
+
+Notes:
+- The example uses the trivial all‑zeros entropy to make the mapping unambiguous; any other roll sequence may be used and verified identically by comparing the produced raw entropy hex against an external tool.
+- For non‑trivial examples, record the exact roll sequence and verify the displayed raw entropy hex by pasting into an external BIP‑39 tool.
 
 ---
 
