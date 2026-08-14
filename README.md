@@ -122,7 +122,7 @@ This tool treats the first recorded die roll as the most significant base-6 digi
 
 ## 📝 Changelog
 
-🔗 v1.0.8
+### v1.0.8
 - **Security:** moved `currentMnemonic` and `currentEntropy` from `window` global to closure-scoped `let` variables — prevents browser extensions or injected scripts from reading generated seeds
 - **Cryptography:** increased minimum dice rolls to reduce modulo bias in base-6 → base-16 conversion — 12 words: 50→52, 15 words: 62→65, 18 words: 75→78, 21 words: 87→91, 24 words: 100→104
 - Updated `index.html.sha256` outer file checksum
