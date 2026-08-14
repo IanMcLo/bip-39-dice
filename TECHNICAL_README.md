@@ -123,6 +123,8 @@ Security note: the extracted seed's security cannot exceed the entropy in the or
 
 This section summarises the physical and operational assumptions made by the generator and gives concise guidance for safe use.
 
+The generator stores the mnemonic and entropy in closure-scoped variables (not  window  globals) to prevent exposure to browser extensions or injected scripts.
+
 - Assumptions: The generator assumes dice are rolled by an honest operator in a physically private environment and that the recording medium (paper or device) is under the operator's control during generation. The document does not assume the operator's environment is free of all risks — instead it documents mitigations for common physical threats.
 
 - Threats considered: Shoulder-surfing or covert recording, biased or tampered dice, accidental leakage via networked devices, and operator error when re-entering or transferring entropy/mnemonic data.
@@ -146,7 +148,7 @@ This section summarises the physical and operational assumptions made by the gen
 
 - Confusing encodings: Binary mapping (1–3 → 0, 4–6 → 1) used for bit accounting is distinct from base-6 digit mapping (digit = roll − 1). Ensure you use the correct mapping for the intended conversion path.
 
-- Insufficient sample size: Collecting too few rolls produces noisy empirical statistics and may leave you short of required entropy. For 12 words prefer ~50 rolls (base-6) or 128 rolls if using the binary mapping.
+- Insufficient sample size: Collecting too few rolls produces noisy empirical statistics and may leave you short of required entropy. For 12 words prefer 52 rolls (base-6) or 128 rolls if using the binary mapping.
 
 - Exposing the mnemonic: Never paste the mnemonic into networked web pages. Use local, audited tools for any additional verification.
 
@@ -239,6 +241,7 @@ Notes on this example:
 - This example uses a low-variance roll sequence for readability. In practice, use full-entropy roll sequences (≈50 dice rolls for 12 words) with high variance.
 - Because the first roll is the most significant digit, the value N is large even though most trailing digits are zero. The left-trim to 32 hex characters is an artifact of this example; with a typical high-entropy sequence, the full hex will naturally fit within the required length.
 - The key pipeline is: recorded rolls → base-6 digits (MSB-first) → big-endian hex → raw entropy → SHA-256 checksum → 11-bit indexes → mnemonic.
+- NOTE*: As of v1.0.8, the implementation requires a minimum of 52 rolls for 12 words (to reduce modulo bias). This example uses 50 rolls for compact mathematical demonstration; in practice, append two additional rolls to meet the current minimum.
 
 ---
 
