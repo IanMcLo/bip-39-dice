@@ -61,11 +61,13 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
 
 2. **Truncate or pad to entropy size**  
    The integer is converted to bytes and truncated (or zero‑padded) to the required entropy length:
-   - 12 words → 128 bits (16 bytes, ≈50 rolls)  
-   - 15 words → 160 bits (20 bytes, ≈62 rolls)  
-   - 18 words → 192 bits (24 bytes, ≈75 rolls)  
-   - 21 words → 224 bits (28 bytes, ≈87 rolls)  
-   - 24 words → 256 bits (32 bytes, ≈100 rolls)
+   
+- 12 words → 128 bits (16 bytes, 52 rolls)
+- 15 words → 160 bits (20 bytes, 65 rolls)
+- 18 words → 192 bits (24 bytes, 78 rolls)
+- 21 words → 224 bits (28 bytes, 91 rolls)
+- 24 words → 256 bits (32 bytes, 104 rolls)
+  
 
 3. **Append BIP39 checksum**  
    SHA‑256 of the entropy – first N bits become the checksum.
@@ -83,8 +85,8 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
 | Dice mapping       | 1→0, 2→1, 3→2, 4→3, 5→4, 6→5                               |
 | Entropy source     | Base‑6 integer from dice rolls                              |
 | Checksum           | SHA‑256 (Web Crypto API + pure‑JS fallback)                 |
-| Min rolls (12 wds) | ~50                                                         |
-| Min rolls (24 wds) | ~100                                                        |
+| Min rolls (12 wds) | 52                                                        |
+| Min rolls (24 wds) | 104                                                        |
 | Bits per roll      | ~2.585 (log₂6)                                              |
 
 ---
