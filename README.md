@@ -121,6 +121,13 @@ This tool treats the first recorded die roll as the most significant base-6 digi
 ---
 
 ## 📝 Changelog
+
+🔗 v1.0.8
+- **Security:** moved `currentMnemonic` and `currentEntropy` from `window` global to closure-scoped `let` variables — prevents browser extensions or injected scripts from reading generated seeds
+- **Cryptography:** increased minimum dice rolls to reduce modulo bias in base-6 → base-16 conversion — 12 words: 50→52, 15 words: 62→65, 18 words: 75→78, 21 words: 87→91, 24 words: 100→104
+- Updated `index.html.sha256` outer file checksum
+- Updated UI labels and live roll counter to reflect new exact roll counts
+  
 ### v1.0.7
 - Added full cryptographic wordlist integrity verification — on page load the generator SHA-256 hashes the entire 2048-word BIP39 array and compares it against a hard-coded canonical hash. This detects any added, deleted, or misspelled words in addition to the existing length, sortedness, and spot-check validations.
 - Updated `index.html.sha256` outer file checksum to match the modified `index.html`.
