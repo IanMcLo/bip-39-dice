@@ -722,10 +722,22 @@ document.addEventListener('DOMContentLoaded', function() {
       try {
         const ta = document.createElement('textarea');
         ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.top = '-9999px';
-        ta.style.left = '-9999px';
-        ta.style.opacity = '0';
+        ta.style.cssText = [
+    'position: fixed',
+    'top: 0',
+    'left: 0',
+    'width: 1px',
+    'height: 1px',
+    'padding: 0',
+    'border: none',
+    'outline: none',
+    'box-shadow: none',
+    'background: transparent',
+    'opacity: 0.01',
+    'pointer-events: none',
+    'z-index: -1'
+].join(';');
+
         ta.setAttribute('readonly', '');
         document.body.appendChild(ta);
         ta.select();
@@ -779,9 +791,22 @@ document.addEventListener('DOMContentLoaded', function() {
           const ta = document.createElement('textarea');
           ta.value = text;
           ta.style.position = 'fixed';
-          ta.style.top = '-9999px';
-          ta.style.left = '-9999px';
-          ta.style.opacity = '0';
+ta.style.cssText = [
+    'position: fixed',
+    'top: 0',
+    'left: 0',
+    'width: 1px',
+    'height: 1px',
+    'padding: 0',
+    'border: none',
+    'outline: none',
+    'box-shadow: none',
+    'background: transparent',
+    'opacity: 0.01',
+    'pointer-events: none',
+    'z-index: -1'
+].join(';');
+          
           ta.setAttribute('readonly', '');
           document.body.appendChild(ta);
           ta.select();
