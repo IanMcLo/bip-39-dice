@@ -151,18 +151,18 @@
 
   <label for="wordCount">Desired Seed Length:</label>
   <select id="wordCount" style="width:100%; padding:12px; border:1px solid #333; border-radius:6px; background:#0f3460; color:#fff; font-size:1.1rem; margin-top:5px; box-sizing:border-box;">
-    <option value="12">12 words (128-bit entropy, ~50 dice rolls)</option>
-    <option value="15">15 words (160-bit entropy, ~62 dice rolls)</option>
-    <option value="18">18 words (192-bit entropy, ~75 dice rolls)</option>
-    <option value="21">21 words (224-bit entropy, ~87 dice rolls)</option>
-    <option value="24" selected>24 words (256-bit entropy, ~100 dice rolls)</option>
+    <option value="12">12 words (128-bit entropy, 52 dice rolls)</option>
+    <option value="15">15 words (160-bit entropy, 65 dice rolls)</option>
+    <option value="18">18 words (192-bit entropy, 78 dice rolls)</option>
+    <option value="21">21 words (224-bit entropy, 91 dice rolls)</option>
+    <option value="24" selected>24 words (256-bit entropy, 104 dice rolls)</option>
   </select>
 
   <label for="diceInput" style="margin-top:18px;">Dice Rolls (1-6, no other numbers):</label>
   <input type="text" id="diceInput" inputmode="numeric" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off" placeholder="e.g., 123456 123456 ...">
 
   <div id="rollCounter" style="margin-top:8px; font-size:0.95rem; color:#aaa;">
-    🎲 <strong>0</strong> rolls entered — need <strong>~100</strong> more for 24 words
+    🎲 <strong>0</strong> rolls entered — need <strong>104</strong> more for 24 words
   </div>
 
   <div class="flex" style="margin-top:10px;">
@@ -631,12 +631,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const wordCountSelect = document.getElementById('wordCount');
   const rollCounter = document.getElementById('rollCounter');
 
-  // Global state so hard reset can actually wipe it
-  window.currentMnemonic = [];
-  window.currentEntropy = '';
+  // Closure-scoped state (not exposed on window)
+  let currentMnemonic = [];
+  let currentEntropy = '';
 
   const REQUIRED_BYTES = {12: 16, 15: 20, 18: 24, 21: 28, 24: 32};
-  const REQUIRED_ROLLS = {12: 50, 15: 62, 18: 75, 21: 87, 24: 100};
+  const REQUIRED_ROLLS = {
+  12: 52,   // was 50  → 134.4 bits raw for 128-bit target
+  15: 65,   // was 62  → 168.0 bits raw for 160-bit target
+  18: 78,   // was 75  → 201.6 bits raw for 192-bit target
+  21: 91,   // was 87  → 235.2 bits raw for 224-bit target
+  24: 104   // was 100 → 268.8 bits raw for 256-bit target
+};
 
   function updateCounter() {
     const raw = diceInput.value;
@@ -671,11 +677,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const entropy = rollsToEntropy(raw, requiredBytes);
-    window.currentEntropy = entropy;
+    currentEntropy = entropy;
 
     try {
       const words = await entropyToMnemonic(entropy);
-      window.currentMnemonic = words;
+      currentMnemonic = words;
       let display = '';
       words.forEach((w, i) => {
         display += `${i+1}. ${w}\n`;
@@ -693,8 +699,8 @@ document.addEventListener('DOMContentLoaded', function() {
     resultsContainer.style.display = 'none';
     mnemonicText.textContent = '';
     entropyText.textContent = '';
-    window.currentMnemonic = [];
-    window.currentEntropy = '';
+    currentMnemonic = [];
+    currentEntropy = '';
   });
 
   // ====== CLIPBOARD (with fallback for file://) ======
@@ -728,20 +734,20 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   copyMnemonicBtn.addEventListener('click', function() {
-    if (!window.currentMnemonic || window.currentMnemonic.length === 0) {
+    if (!currentMnemonic || currentMnemonic.length === 0) {
       alert('No seed phrase generated yet.');
       return;
     }
-    const text = window.currentMnemonic.join(' ');
+    const text = currentMnemonic.join(' ');
     copyText(text, 'Seed phrase');
   });
 
   copyEntropyBtn.addEventListener('click', function() {
-    if (!window.currentEntropy) {
+    if (!currentEntropy) {
       alert('No entropy generated yet.');
       return;
     }
-    copyText(window.currentEntropy, 'Entropy hex');
+    copyText(currentEntropy, 'Entropy hex');
   });
 
   diceInput.addEventListener('keydown', function(e) {
