@@ -703,6 +703,16 @@ document.addEventListener('DOMContentLoaded', function() {
     currentEntropy = '';
   });
 
+  // Hard reset also clears closure-scoped seed variables before wiping DOM/window state
+  const hardResetBtn = document.getElementById('hardResetBtn');
+  if (hardResetBtn) {
+    hardResetBtn.addEventListener('click', function() {
+      currentMnemonic = [];
+      currentEntropy = '';
+      if (typeof window.hardReset === 'function') window.hardReset();
+    });
+  }
+
   // ====== CLIPBOARD (with fallback for file://) ======
   async function copyText(text, label) {
     try {
@@ -848,8 +858,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('resultsContainer');
     if (container) container.style.display = 'none';
 
+    // NOTE: currentMnemonic and currentEntropy are closure-scoped (not window globals)
+    // and are cleared by the main DOMContentLoaded handler above.
     var globalsToWipe = [
-      'currentMnemonic', 'currentEntropy', 'mnemonic', 'entropy', 'bits', 'seed', 'rolls',
+      'mnemonic', 'entropy', 'bits', 'seed', 'rolls',
       'diceEntropy', 'hexString', 'byteArray', 'wordArray', 'generatedMnemonic', 'entropyHex'
     ];
     globalsToWipe.forEach(function(varName) {
