@@ -151,7 +151,7 @@
 
   <label for="wordCount">Desired Seed Length:</label>
   <select id="wordCount" style="width:100%; padding:12px; border:1px solid #333; border-radius:6px; background:#0f3460; color:#fff; font-size:1.1rem; margin-top:5px; box-sizing:border-box;">
-    <option value="12">12 words (128-bit entropy, 52 dice rolls)</option>
+    <option value="12">12 words (128-bit entropy, 54 dice rolls)</option>
     <option value="15">15 words (160-bit entropy, 65 dice rolls)</option>
     <option value="18">18 words (192-bit entropy, 78 dice rolls)</option>
     <option value="21">21 words (224-bit entropy, 91 dice rolls)</option>
@@ -617,7 +617,7 @@ function rollsToEntropy(rollString, requiredBytes) {
 }
 
 // ============================================================
-// UI LOGIC
+// UI LOGIC (Complete Merged Version)
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
   const diceInput = document.getElementById('diceInput');
@@ -631,18 +631,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const wordCountSelect = document.getElementById('wordCount');
   const rollCounter = document.getElementById('rollCounter');
 
-  // Closure-scoped state (not exposed on window)
+  // Closure-scoped state
   let currentMnemonic = [];
   let currentEntropy = '';
 
   const REQUIRED_BYTES = {12: 16, 15: 20, 18: 24, 21: 28, 24: 32};
   const REQUIRED_ROLLS = {
-  12: 52,   // was 50  → 134.4 bits raw for 128-bit target
-  15: 65,   // was 62  → 168.0 bits raw for 160-bit target
-  18: 78,   // was 75  → 201.6 bits raw for 192-bit target
-  21: 91,   // was 87  → 235.2 bits raw for 224-bit target
-  24: 104   // was 100 → 268.8 bits raw for 256-bit target
-};
+    12: 54,   // 139.6 bits raw for 128-bit target (extra safety buffer)
+    15: 65,   // 168.0 bits raw for 160-bit target
+    18: 78,   // 201.6 bits raw for 192-bit target
+    21: 91,   // 235.2 bits raw for 224-bit target
+    24: 104   // 268.8 bits raw for 256-bit target
+  };
 
   function updateCounter() {
     const raw = diceInput.value;
@@ -651,13 +651,60 @@ document.addEventListener('DOMContentLoaded', function() {
     const requiredRolls = REQUIRED_ROLLS[selectedWords];
     const remaining = Math.max(0, requiredRolls - rolls);
     const color = rolls >= requiredRolls ? '#6ee7b7' : (rolls >= requiredRolls * 0.8 ? '#f0a500' : '#fca5a5');
-    rollCounter.innerHTML = '🎲 <strong style="color:' + color + '">' + rolls + '</strong> rolls entered' +
-      (remaining > 0 ? ' — need <strong>' + remaining + '</strong> more for ' + selectedWords + ' words' :
-      ' — <strong style="color:#6ee7b7;">✅ enough for ' + selectedWords + ' words</strong>');
+
+    if (rolls >= requiredRolls) {
+      rollCounter.innerHTML = `🎲 <strong style="color:${color}">${rolls}</strong> rolls entered — <strong style="color:#6ee7b7;">✅ Optimal inputs reached! Press "Generate" button.</strong>`;
+    } else {
+      rollCounter.innerHTML = `🎲 <strong style="color:${color}">${rolls}</strong> rolls entered — need <strong>${remaining}</strong> more for ${selectedWords} words`;
+    }
   }
 
-  diceInput.addEventListener('input', updateCounter);
-  wordCountSelect.addEventListener('change', updateCounter);
+  // 1. Lock typing when exact required roll count is reached
+  diceInput.addEventListener('keydown', function(e) {
+    const selectedWords = parseInt(wordCountSelect.value, 10);
+    const requiredRolls = REQUIRED_ROLLS[selectedWords];
+    const currentRolls = diceInput.value.replace(/[^1-6]/g, '').length;
+
+    const navigationKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Home', 'End'];
+    const isShortcut = e.ctrlKey || e.metaKey;
+
+    if (e.key === 'Enter') {
+      generateBtn.click();
+      return;
+    }
+
+    if (currentRolls >= requiredRolls && !navigationKeys.includes(e.key) && !isShortcut) {
+      e.preventDefault();
+    }
+  });
+
+  // 2. Truncate long paste entries and enforce strict numeric bounds
+  diceInput.addEventListener('input', function() {
+    const selectedWords = parseInt(wordCountSelect.value, 10);
+    const requiredRolls = REQUIRED_ROLLS[selectedWords];
+    let clean = diceInput.value.replace(/[^1-6]/g, '');
+
+    if (clean.length > requiredRolls) {
+      diceInput.value = clean.slice(0, requiredRolls);
+    } else if (diceInput.value !== clean) {
+      diceInput.value = clean;
+    }
+
+    updateCounter();
+  });
+
+  // 3. Auto-adjust input string length if dropdown changes to a smaller word target
+  wordCountSelect.addEventListener('change', function() {
+    const selectedWords = parseInt(wordCountSelect.value, 10);
+    const requiredRolls = REQUIRED_ROLLS[selectedWords];
+    let clean = diceInput.value.replace(/[^1-6]/g, '');
+
+    if (clean.length > requiredRolls) {
+      diceInput.value = clean.slice(0, requiredRolls);
+    }
+    updateCounter();
+  });
+
   updateCounter();
 
   generateBtn.addEventListener('click', async function() {
@@ -666,7 +713,7 @@ document.addEventListener('DOMContentLoaded', function() {
       alert('Please enter some dice rolls first.');
       return;
     }
-    const selectedWords = parseInt(document.getElementById('wordCount').value, 10);
+    const selectedWords = parseInt(wordCountSelect.value, 10);
     const requiredBytes = REQUIRED_BYTES[selectedWords];
     const requiredRolls = REQUIRED_ROLLS[selectedWords];
     const rollCount = raw.replace(/[^1-6]/g, '').length;
@@ -676,12 +723,12 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    const entropy = rollsToEntropy(raw, requiredBytes);
-    currentEntropy = entropy;
-
     try {
+      const entropy = await rollsToEntropy(raw, requiredBytes);
+      currentEntropy = entropy;
       const words = await entropyToMnemonic(entropy);
       currentMnemonic = words;
+
       let display = '';
       words.forEach((w, i) => {
         display += `${i+1}. ${w}\n`;
@@ -701,9 +748,10 @@ document.addEventListener('DOMContentLoaded', function() {
     entropyText.textContent = '';
     currentMnemonic = [];
     currentEntropy = '';
+    updateCounter();
   });
 
-  // Hard reset also clears closure-scoped seed variables before wiping DOM/window state
+  // Hard reset integration
   const hardResetBtn = document.getElementById('hardResetBtn');
   if (hardResetBtn) {
     hardResetBtn.addEventListener('click', function() {
@@ -713,7 +761,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ====== CLIPBOARD (with fallback for file://) ======
+  // Clipboard functionality
   async function copyText(text, label) {
     try {
       await navigator.clipboard.writeText(text);
@@ -723,21 +771,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const ta = document.createElement('textarea');
         ta.value = text;
         ta.style.cssText = [
-    'position: fixed',
-    'top: 0',
-    'left: 0',
-    'width: 1px',
-    'height: 1px',
-    'padding: 0',
-    'border: none',
-    'outline: none',
-    'box-shadow: none',
-    'background: transparent',
-    'opacity: 0.01',
-    'pointer-events: none',
-    'z-index: -1'
-].join(';');
-
+          'position: fixed', 'top: 0', 'left: 0', 'width: 1px', 'height: 1px',
+          'padding: 0', 'border: none', 'outline: none', 'box-shadow: none',
+          'background: transparent', 'opacity: 0.01', 'pointer-events: none', 'z-index: -1'
+        ].join(';');
         ta.setAttribute('readonly', '');
         document.body.appendChild(ta);
         ta.select();
@@ -760,8 +797,7 @@ document.addEventListener('DOMContentLoaded', function() {
       alert('No seed phrase generated yet.');
       return;
     }
-    const text = currentMnemonic.join(' ');
-    copyText(text, 'Seed phrase');
+    copyText(currentMnemonic.join(' '), 'Seed phrase');
   });
 
   copyEntropyBtn.addEventListener('click', function() {
@@ -771,13 +807,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     copyText(currentEntropy, 'Entropy hex');
   });
-
-  diceInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      generateBtn.click();
-    }
-  });
 });
+
 
 // ============================================================
 // CLIPBOARD PATCH (ensures copy works on file://)
