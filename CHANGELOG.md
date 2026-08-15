@@ -1,4 +1,12 @@
 # Changelog
+## v1.1.0 
+
+ Enhanced 12-Word Security Buffer: Increased 12-word minimum requirement from 52 to **54 dice rolls** (~139.6 bits raw entropy) to provide an extra safety margin against physical die bias.
+ Input Locking at Threshold: Automatically locks typing when exact roll targets are reached (54, 65, 78, 91, 104) while preserving navigation keys, Enter, and keyboard shortcuts.
+ Paste & Dropdown Handling: Added automatic truncation for long paste inputs and dynamic array trimming when switching to lower word count tiers.
+ UX Status Updates: Added real-time feedback messaging 'Optimal inputs reached!' Press "Generate" button.` upon reaching exact roll requirements.
+ Release File Hash: `cdf8941de2ec86a706a3b267d88ef8add738baea3132982557d62536a17bf817`
+* 
 ## v1.0.9
 Security: Attached a hardResetBtn listener inside the DOMContentLoaded closure to explicitly clear local currentMnemonic and currentEntropy variables before calling window.hardReset(). Removed currentMnemonic and currentEntropy from globalsToWipe, delegating closure-scoped state cleanup directly to the main DOM closure.
 ## v1.0.8
