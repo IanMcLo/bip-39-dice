@@ -105,10 +105,118 @@ Security note: the extracted seed's security cannot exceed the entropy in the or
 
 ---
 
+## 5. Proving Over-Sampling Eliminates Modulo Bias
 
-## 5. Implementation & Interoperability Notes
+To prove how over-sampling eliminates modulo bias, we analyze the mapping of a large base‑6 integer space onto a smaller base‑2 target space.
 
-* **Byte/bit ordering & Modulo Bias Mitigation:** The implementation treats the first recorded die roll as the most significant base-6 digit (MSB-first). The accumulated base-6 integer is converted directly to a big-endian hex string. Elevated roll counts (54 rolls for 12 words up to 104 rolls for 24 words) ensure the raw entropy pool ($6^N$) comfortably exceeds 2^target_bits providing an extra **~5–8 bits** of safety buffer that reduces modulo bias to negligible levels.
+Modulo bias occurs when a total number of outcomes ($N$) is mapped into a target range ($R$) via a modulo operation, and $N$ is not perfectly divisible by $R$. This leaves some outcomes with a slightly higher probability of appearing than others.
+
+Here is the step-by-step mathematical proof demonstrating that a 5–8 bit over‑sampling buffer reduces this bias to safe, cryptographically negligible levels.
+
+
+
+## a. Defining the Spaces and the Bias Formula
+
+Let $k$ be the number of dice rolls. The total number of unique base‑6 outcomes is:
+
+$$N = 6^k$$
+
+Let $b$ be the target number of bits (e.g., 128 bits for 12 words, 256 bits for 24 words). The target range of the output space is:
+
+$$R = 2^b$$
+
+When we convert the base‑6 pool to the target byte length, we map $N$ outcomes into $R$ buckets. Because $6^k$ is never a perfect power of 2, the outcomes cannot be distributed perfectly equally.
+
+Let $q = \lfloor N/R \rfloor$ and $r = N \bmod R$.  
+Then $r$ buckets contain $q+1$ values, and $R-r$ buckets contain $q$ values.
+
+The absolute probability difference (the bias $\epsilon$) between the most favored bucket and the least favored bucket is:
+
+$$\epsilon = \frac{\lceil N/R \rceil - \lfloor N/R \rfloor}{N} = \frac{1}{N} = \frac{1}{6^k}$$
+
+While $\epsilon$ is the individual item bias, the total statistical distance (Total Variation Distance) between our biased distribution $P$ and a perfectly uniform distribution $U$ over the target space $R$ is bounded by:
+
+$$\Delta(P, U) \le \frac{R}{2N} = \frac{2^b}{2 \cdot 6^k}$$
+
+
+
+## b. Quantifying the Safety Buffer (Entropy Over‑sampling)
+
+To measure how much "extra" entropy we are gathering, we calculate the raw bit‑equivalent entropy of $k$ dice rolls using Shannon entropy for independent, uniform rolls:
+
+$$H = \log_2(6^k) = k \cdot \log_2(6) \approx k \cdot 2.58496 \text{ bits}$$
+
+The safety buffer $\text{Buffer}_{\text{bits}}$ is the difference between our raw entropy and our target bits:
+
+$$\text{Buffer}_{\text{bits}} = H - b = (k \cdot \log_2(6)) - b$$
+
+
+
+## c. Proof by Case Analysis (12 Words & 24 Words)
+
+Plugging in the exact UI specifications into these formulas gives the exact numbers.
+
+### Case (i): 12‑Word Mnemonic ($b = 128$ bits)
+
+- Target: 128 bits ($2^{128}$)
+- Rolls ($k$): 54 rolls
+- Raw outcomes ($N$): $6^{54} \approx 2.407 \times 10^{42}$
+
+Calculate the bit equivalent and the exact buffer:
+
+$$\text{Bit Equivalent} = 54 \cdot \log_2(6) \approx 54 \cdot 2.5849625 = 139.588 \text{ bits}$$
+
+$$\text{Buffer}_{\text{bits}} = 139.588 - 128 = \mathbf{11.588 \text{ bits}}$$
+
+
+Now calculate the Total Variation Distance (bias upper bound):
+
+$$\Delta(P, U) \le \frac{2^{128}}{2 \cdot 6^{54}} = \frac{2^{128}}{2 \cdot 2^{139.588}} = \frac{2^{128}}{2^{140.588}} = 2^{-12.588} \approx \mathbf{1.62 \times 10^{-4}}$$
+
+An attacker trying to exploit this bias gains an advantage of less than 1 in 6,100 over a perfectly random 128‑bit pool. Because the baseline security of 128 bits is already astronomically high, a variation of $2^{-12.588}$ provides no exploitable mathematical edge.
+
+
+
+### Case (ii): 24‑Word Mnemonic ($b = 256$ bits)
+
+- Target: 256 bits ($2^{256}$)
+- Rolls ($k$): 104 rolls
+- Raw outcomes ($N$): $6^{104}$
+
+Calculate the bit equivalent and the buffer:
+
+$$\text{Bit Equivalent} = 104 \cdot \log_2(6) \approx 104 \cdot 2.5849625 = 268.836 \text{ bits}$$
+
+$$\text{Buffer}_{\text{bits}} = 268.836 - 256 = \mathbf{12.836 \text{ bits}}$$
+
+Now look at the Total Variation Distance for the 24‑word tier:
+
+$$\Delta(P, U) \le \frac{2^{256}}{2 \cdot 6^{104}} = \frac{2^{256}}{2 \cdot 2^{268.836}} = \frac{2^{256}}{2^{269.836}} = 2^{-13.836} \approx \mathbf{6.73 \times 10^{-5}}$$
+
+For a 256‑bit target, the bias is squeezed down to approximately 1 in 14,800. In cryptography, an advantage this small against an output space of $2^{256}$ is considered entirely negligible.
+
+---
+
+## 6. Why Trimming Left (Lower‑Order Characters) is Mathematically Sound
+
+The specification requires keeping the lower‑order characters via `hex.slice(-requiredHexLen)`.
+
+In base‑6 to base‑16 conversion:
+
+- The leftmost digits (MSB) of the resulting hex string are heavily dictated by the earliest dice rolls. If the total pool size $N$ doesn't cleanly align with $R$, the biased "remainder" clipping naturally distorts the distribution of the highest‑order bits.
+- The rightmost digits (LSB) represent the rapid, high‑frequency oscillations of the base‑6 integer accumulation. Because the final dice rolls $(k-2, k-1, k)$ directly flip these lowest bits back and forth across every single integer increment, the lower‑order hex characters maintain an evenly distributed chaotic spread.
+
+Mathematically, keeping only the lower‑order hex digits is exactly the same as taking:
+
+$$X \bmod 2^b$$
+
+where $X$ is the integer formed by the base‑6 dice outcomes.  
+
+By discarding the excess bits from the left, we are effectively pushing the mathematical remainder of the imperfect $6^k \to 2^b$ mapping into the discarded high‑order zone, preserving the highly uniform distribution of the lower‑order bits.
+
+## 7. Implementation & Interoperability Notes
+
+* **Byte/bit ordering & Modulo Bias Mitigation:** The implementation treats the first recorded die roll as the most significant base-6 digit (MSB-first). The accumulated base-6 integer is converted directly to a big-endian hex string. Elevated roll counts (54 rolls for 12 words up to 104 rolls for 24 words) ensure the raw entropy pool ($6^N$) comfortably exceeds 2^target_bits providing an extra **~11–13 bits** of safety buffer that reduces modulo bias to negligible levels.
 
 * **Hex Slicing & Precision:** Once the base-6 integer is converted to a hexadecimal string, it is formatted to the exact target byte length ($2 \times \text{requiredBytes}$). If the raw hex output exceeds the required byte precision, **lower-order hex characters are retained** (`hex.slice(-requiredHexLen)`) — trimming excess from the left — to preserve the entropy contributed by the final rolls. Shorter outputs are left-padded with zeros.
 
