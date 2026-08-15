@@ -105,17 +105,18 @@ Security note: the extracted seed's security cannot exceed the entropy in the or
 
 ---
 
+
 ## 5. Implementation & Interoperability Notes
 
-- Byte/bit ordering: The implementation treats the first recorded die roll as the most significant base-6 digit. The full roll sequence is interpreted as a single base-6 integer, which is then converted to a big-endian hex string padded to the required byte length. Within each byte, bits are read in conventional MSB-first order when forming the bitstream S for checksum and word slicing. In short: roll sequence → base-6 BigInt (MSB-first) → big-endian hex → bytes' bits read MSB-first to form S. Always rely on the displayed entropy hex for cross-verification.
+* **Byte/bit ordering & Modulo Bias Mitigation:** The implementation treats the first recorded die roll as the most significant base-6 digit (MSB-first). The accumulated base-6 integer is converted directly to a big-endian hex string. Elevated roll counts (54 rolls for 12 words up to 104 rolls for 24 words) ensure the raw entropy pool ($6^N$) comfortably exceeds $2^{\text{target\_bits}}$, providing an extra **~5–8 bits** of safety buffer that reduces modulo bias to negligible levels.
 
-- Verification: When verifying with third-party tools (e.g., Ian Coleman), paste the displayed raw entropy hex — this hex reflects the exact byte ordering used by the implementation. Re-entering the raw dice rolls into tools that assume a different roll-to-byte ordering will produce a different entropy value; that is expected and does not indicate an error so long as the entropy hex matches.
+* **Hex Slicing & Precision:** Once the base-6 integer is converted to a hexadecimal string, it is formatted to the exact target byte length ($2 \times \text{requiredBytes}$). If the raw hex output exceeds the required byte precision, **lower-order hex characters are retained** (`hex.slice(-requiredHexLen)`) — trimming excess from the left — to preserve the entropy contributed by the final rolls. Shorter outputs are left-padded with zeros.
 
-- Excess roll truncation: If more than the required number of rolls are provided, the implementation keeps only the least-significant bytes of the resulting hex string (trimming from the left). For reproducibility, enter exactly the recommended number of rolls.
+* **Input Locking & UX Boundaries:** To guarantee precise entropy boundaries and reproducible hashes across tools, the UI enforces strict input locking upon reaching the exact target roll count (54, 65, 78, 91, or 104 rolls). Keystrokes are capped at the target, and pasted strings are automatically truncated to match the exact requirement for the selected word tier.
 
-- Alternative encodings: The binary mapping (1–3 → 0, 4–6 → 1) described in §1.1 is used only for entropy accounting and statistical analysis. The actual conversion path uses base-6 digit mapping (digit = roll − 1) with the first roll as the most significant digit.
+* **Verification:** When verifying outputs with third-party tools (e.g., Ian Coleman), paste the displayed raw hex entropy. This hex reflects the exact byte ordering used by the implementation. Re-entering raw dice rolls into tools that assume a different roll-to-byte ordering or lower roll counts will produce a different entropy value; this is expected and does not indicate an error so long as the entropy hex matches.
 
-- Cryptographic primitives: SHA-256 is provided by the Web Crypto API in browsers, with a pure-JS fallback for offline file:// use.
+* **Cryptographic Primitives:** Mnemonic key derivation uses PBKDF2-HMAC-SHA512 per BIP-39 specifications. SHA-256 for wordlist verification is provided natively by `window.crypto.subtle` with a pure-JS fallback for offline `file://` access.
 
 ---
 
