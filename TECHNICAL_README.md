@@ -108,7 +108,7 @@ Security note: the extracted seed's security cannot exceed the entropy in the or
 
 ## 5. Implementation & Interoperability Notes
 
-* **Byte/bit ordering & Modulo Bias Mitigation:** The implementation treats the first recorded die roll as the most significant base-6 digit (MSB-first). The accumulated base-6 integer is converted directly to a big-endian hex string. Elevated roll counts (54 rolls for 12 words up to 104 rolls for 24 words) ensure the raw entropy pool ($6^N$) comfortably exceeds $2^{\text{target\_bits}}$, providing an extra **~5–8 bits** of safety buffer that reduces modulo bias to negligible levels.
+* **Byte/bit ordering & Modulo Bias Mitigation:** The implementation treats the first recorded die roll as the most significant base-6 digit (MSB-first). The accumulated base-6 integer is converted directly to a big-endian hex string. Elevated roll counts (54 rolls for 12 words up to 104 rolls for 24 words) ensure the raw entropy pool ($6^N$) comfortably exceeds 2^target_bits providing an extra **~5–8 bits** of safety buffer that reduces modulo bias to negligible levels.
 
 * **Hex Slicing & Precision:** Once the base-6 integer is converted to a hexadecimal string, it is formatted to the exact target byte length ($2 \times \text{requiredBytes}$). If the raw hex output exceeds the required byte precision, **lower-order hex characters are retained** (`hex.slice(-requiredHexLen)`) — trimming excess from the left — to preserve the entropy contributed by the final rolls. Shorter outputs are left-padded with zeros.
 
