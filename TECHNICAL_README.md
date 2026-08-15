@@ -214,6 +214,8 @@ where $X$ is the integer formed by the base‑6 dice outcomes.
 
 By discarding the excess bits from the left, we are effectively pushing the mathematical remainder of the imperfect $6^k \to 2^b$ mapping into the discarded high‑order zone, preserving the highly uniform distribution of the lower‑order bits.
 
+---
+
 ## 7. Implementation & Interoperability Notes
 
 * **Byte/bit ordering & Modulo Bias Mitigation:** The implementation treats the first recorded die roll as the most significant base-6 digit (MSB-first). The accumulated base-6 integer is converted directly to a big-endian hex string. Elevated roll counts (54 rolls for 12 words up to 104 rolls for 24 words) ensure the raw entropy pool ($6^N$) comfortably exceeds 2^target_bits providing an extra **~11–13 bits** of safety buffer that reduces modulo bias to negligible levels.
@@ -228,7 +230,7 @@ By discarding the excess bits from the left, we are effectively pushing the math
 
 ---
 
-## Threat Model & Operational Security
+## 8. Threat Model & Operational Security
 
 This section summarises the physical and operational assumptions made by the generator and gives concise guidance for safe use.
 
@@ -249,7 +251,7 @@ The generator stores the mnemonic and entropy in closure-scoped variables (not  
 
 ---
 
-## Common Pitfalls and How to Avoid Them
+## 9. Common Pitfalls and How to Avoid Them
 
 - Re-typing dice rolls into other tools: Always verify by using the displayed raw entropy hex rather than re-typing roll sequences into third-party tools.
 
@@ -263,7 +265,7 @@ The generator stores the mnemonic and entropy in closure-scoped variables (not  
 
 ---
 
-## Trusted Code Base & Audit Checklist
+## 10. Trusted Code Base & Audit Checklist
 
 For auditors and advanced users, verify the following before using this tool in a threat-sensitive workflow:
 
@@ -284,7 +286,7 @@ Suggested audit checklist:
 - Verify release artifact checksums/signatures.
 
 ---
-## 6. Worked Example — 12 words (54 rolls)
+## 11. Worked Example — 12 words (54 rolls)
 
 This worked example demonstrates how a 54-roll sequence maps to raw entropy hex and a BIP-39 mnemonic under the v1.1.0 base-6 BigInt ordering.
 
@@ -292,7 +294,6 @@ This worked example demonstrates how a 54-roll sequence maps to raw entropy hex 
 * **Target Mnemonic:** 12 words ($E = 128 \text{ bits}$, 16 bytes)
 * **Roll Sequence:** 54 rolls (`4, 3` followed by 52 rolls of `1`)
 
----
 
 ### Step-by-Step Conversion
 
@@ -302,19 +303,21 @@ This worked example demonstrates how a 54-roll sequence maps to raw entropy hex 
 
 2. **Calculate Base-6 BigInt ($N$):**
    $$N = 3 \times 6^{53} + 2 \times 6^{52} = 377,419,951,753,923,732,497,011,104,784,816,564,288$$
-   $$\text{Unpadded Hex Output} = \text{3bf055a1d9eaf04295400000000000000} \text{ (33 hex characters)}$$
+   $$\text{Unpadded Hex Output} = \text{0x6ae3bf055a1d9eaf0429540000000000000}
+\text{ (35 hex characters)}$$
 
-3. **Format & Trim to Target Byte Precision:**
+
+4. **Format & Trim to Target Byte Precision:**
    * Target length for 12 words: 16 bytes (32 hex characters).
-   * Taking `hex.slice(0, 32)` retains the 32 most significant hex characters:
+   * Taking `slice(-32)` retains the 32 least significant hex characters:
    $$\text{Raw Entropy Hex} = \text{3bf055a1d9eaf0429540000000000000}$$
 
-4. **Checksum & Word Index Generation:**
+5. **Checksum & Word Index Generation:**
    * Compute $\text{SHA-256}(\text{Raw Entropy})$ to extract the 4-bit checksum.
    * Append checksum to raw entropy to form the 132-bit bitstream $S$.
    * Split $S$ into 11-bit MSB-first chunks to map to BIP-39 English wordlist indices.
 
-5. **Verification Output:**
+6. **Verification Output:**
    * **Raw Entropy Hex:** `3bf055a1d9eaf0429540000000000000`
    * **Generated Mnemonic:** `desk live half record pyramid candy fence abandon abandon abandon abandon acid`
 
