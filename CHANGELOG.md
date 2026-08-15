@@ -1,4 +1,9 @@
 # Changelog
+## v1.1.1
+
+Security fix: Corrected 64-bit message length encoding in the pure-JS SHA-256 fallback (`sha256Fallback`). JavaScript's `>>>` operator wraps shift counts modulo 32, causing the high 4 bytes of the length field to be encoded incorrectly. This produced invalid hashes for any non-empty message, which would result in invalid BIP39 checksums and mnemonics in environments without `crypto.subtle` (e.g., older browsers, non-secure contexts). Verified against all four NIST FIPS 180-2 test vectors.
+Release File Hash: `9fec343f5a21b47faaa49d45b6f02399aa825169a31752e83869a63cc83fb8ee`
+
 ## v1.1.0 
 
  Enhanced 12-Word Security Buffer: Increased 12-word minimum requirement from 52 to **54 dice rolls** (~139.6 bits raw entropy) to provide an extra safety margin against physical die bias.
