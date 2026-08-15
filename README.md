@@ -40,39 +40,40 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
 
 ## ✨ Features
 
-- **Single HTML file** – no build step, no dependencies, no external scripts.  
-- **Standard base‑6 conversion** – dice rolls treated as a base‑6 number (1→0, 2→1, …, 6→5).
-- **Verified against Ian Coleman** – pasting generated seed words produces identical entropy hex, account keys, and addresses.
-- **Multiple lengths** – 12, 15, 18, 21, or 24 words.  
-- **Live roll counter** – real‑time count with colour‑coded progress.  
-- **Wordlist integrity self-test** – cryptographically verifies the embedded BIP39 English wordlist (2048 words) via SHA-256 on every load.
+* **Single HTML file** – no build step, no dependencies, no external scripts.
+* **Standard base-6 conversion** – dice rolls treated as a base-6 number ($1 \to 0, 2 \to 1, \dots, 6 \to 5$).
+* **Modulo Bias Mitigation** – elevated roll counts (54, 65, 78, 91, 104) ensure raw base-6 entropy exceeds target bit length, providing a safety margin against die bias.
+* **Strict Input Locking** – UI automatically caps text inputs and truncates paste operations once the exact target roll count is met.
+* **Multiple seed lengths** – 12 (54 rolls), 15 (65 rolls), 18 (78 rolls), 21 (91 rolls), or 24 words (104 rolls).
+* **Verified against Ian Coleman** – pasting generated raw entropy hex produces identical seed words, account keys, and addresses.
+* **Live roll counter** – real-time progress display with dynamic UI feedback upon reaching target thresholds.
+* **Wordlist integrity self-test** – cryptographically verifies the embedded BIP39 English wordlist (2048 words) via SHA-256 on every load.
+* **Copy-to-clipboard** – for both the mnemonic and raw entropy hex.
+* **Hard reset button** – wipes DOM state and nullifies closure-scoped JavaScript variables.
+* **Dark mode UI** – clean contrast designed for long dice-rolling sessions.
 
-- **Copy‑to‑clipboard** – for both the mnemonic and raw entropy hex.  
-- **Hard reset button** – wipes DOM state and nullifies JavaScript variables.  
-- **Dark mode UI** – easy on the eyes during long dice‑rolling sessions.
 
 ---
 
 ## ⚙️ How It Works
 
-1. **Dice rolls → base‑6 number**  
-   Each roll (1‑6) is mapped to a digit (0‑5). The full sequence is treated as one large base‑6 integer.
+1. **Dice rolls → base-6 number**  
+   Each roll (1-6) is mapped to a digit (0-5). The full sequence is treated as one large base-6 integer.
 
 2. **Truncate or pad to entropy size**  
-   The integer is converted to bytes and truncated (or zero‑padded) to the required entropy length:
-   
-- 12 words → 128 bits (16 bytes, 52 rolls)
-- 15 words → 160 bits (20 bytes, 65 rolls)
-- 18 words → 192 bits (24 bytes, 78 rolls)
-- 21 words → 224 bits (28 bytes, 91 rolls)
-- 24 words → 256 bits (32 bytes, 104 rolls)
-  
+   The integer is converted to bytes and truncated (or zero-padded) to the required entropy length:
+   * **12 words** → 128 bits (16 bytes, 54 rolls)
+   * **15 words** → 160 bits (20 bytes, 65 rolls)
+   * **18 words** → 192 bits (24 bytes, 78 rolls)
+   * **21 words** → 224 bits (28 bytes, 91 rolls)
+   * **24 words** → 256 bits (32 bytes, 104 rolls)
 
 3. **Append BIP39 checksum**  
-   SHA‑256 of the entropy – first N bits become the checksum.
+   SHA-256 of the entropy — first N bits become the checksum.
 
 4. **Map to words**  
-   Entropy + checksum split into 11‑bit chunks, each indexing into the BIP39 English wordlist (2048 words).
+   Entropy + checksum split into 11-bit chunks, each indexing into the BIP39 English wordlist (2048 words).
+
 
 ---
 
@@ -84,7 +85,7 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
 | Dice mapping       | 1→0, 2→1, 3→2, 4→3, 5→4, 6→5                               |
 | Entropy source     | Base‑6 integer from dice rolls                              |
 | Checksum           | SHA‑256 (Web Crypto API + pure‑JS fallback)                 |
-| Min rolls (12 wds) | 52                                                        |
+| Min rolls (12 wds) | 54                                                        |
 | Min rolls (24 wds) | 104                                                        |
 | Bits per roll      | ~2.585 (log₂6)                                              |
 
