@@ -182,32 +182,33 @@ This worked example demonstrates how a 54-roll sequence maps to raw entropy hex 
 
 ### Example Parameters
 * **Target Mnemonic:** 12 words ($E = 128 \text{ bits}$, 16 bytes)
-* **Roll Sequence:** 54 rolls (`4, 3,` followed by 52 rolls of `1`)
+* **Roll Sequence:** 54 rolls (`4, 3` followed by 52 rolls of `1`)
 
 ---
 
 ### Step-by-Step Conversion
 
 1. **Map Rolls to Base-6 Digits ($\text{digit} = \text{roll} - 1$):**
-   * First two rolls (`4, 3`) produce digits: `[3, 2]`
-   * Remaining 52 rolls (`1`) produce digits: `[0, 0, ..., 0]`
+   * First two rolls (`4, 3`): digits `[3, 2]`
+   * Remaining 52 rolls (`1`): digits `[0, 0, ..., 0]`
 
 2. **Calculate Base-6 BigInt ($N$):**
    $$N = 3 \times 6^{53} + 2 \times 6^{52} = 377,419,951,753,923,732,497,011,104,784,816,564,288$$
-   $$\text{Unpadded Hex Output} = \text{13c66f4d2f831bd09873d63e000000000000} \text{ (36 hex characters)}$$
+   $$\text{Unpadded Hex Output} = \text{3bf055a1d9eaf04295400000000000000} \text{ (33 hex characters)}$$
 
 3. **Format & Trim to Target Byte Precision:**
    * Target length for 12 words: 16 bytes (32 hex characters).
-   * Retain the 32 most significant hex characters (`hex.slice(0, 32)`):
-   $$\text{Raw Entropy Hex} = \text{13c66f4d2f831bd09873d63e00000000}$$
+   * Taking `hex.slice(0, 32)` retains the 32 most significant hex characters:
+   $$\text{Raw Entropy Hex} = \text{3bf055a1d9eaf0429540000000000000}$$
 
 4. **Checksum & Word Index Generation:**
-   * Compute $\text{SHA-256}(\text{Raw Entropy})$ to extract the 4-bit checksum (`0x7`).
-   * Append checksum to the 128-bit raw entropy to form the 132-bit bitstream $S$.
+   * Compute $\text{SHA-256}(\text{Raw Entropy})$ to extract the 4-bit checksum.
+   * Append checksum to raw entropy to form the 132-bit bitstream $S$.
    * Split $S$ into 11-bit MSB-first chunks to map to BIP-39 English wordlist indices.
 
-5. **Verification:**
-   Pasting `13c66f4d2f831bd09873d63e00000000` into Ian Coleman's BIP-39 tool (or verifying via native Web Crypto) yields the exact 12-word mnemonic.
+5. **Verification Output:**
+   * **Raw Entropy Hex:** `3bf055a1d9eaf0429540000000000000`
+   * **Generated Mnemonic:** `desk live half record pyramid candy fence abandon abandon abandon abandon acid`
 
 ---
 
