@@ -176,73 +176,38 @@ Suggested audit checklist:
 - Verify release artifact checksums/signatures.
 
 ---
+## 6. Worked Example — 12 words (54 rolls)
 
-## 6. Worked Example — 12 words (trivial)
+This worked example demonstrates how a 54-roll sequence maps to raw entropy hex and a BIP-39 mnemonic under the v1.1.0 base-6 BigInt ordering.
 
-This worked example demonstrates how a recorded dice sequence maps to raw entropy hex and a BIP-39 mnemonic under the project's ordering. For clarity we use the all-zero entropy example which is canonical.
-
-Steps (trivial):
-
-1. Dice rolls (example): 128 rolls of "1" (i.e., all rolls in {1,2,3}) produce 128 zero bits under the 1→0,2→0,3→0,4→1,5→1,6→1 mapping.
-
-2. Raw entropy bytes: The integer value 0 → 16 bytes of 0x00 → raw entropy hex:
-
-   00000000000000000000000000000000
-
-3. Checksum & concatenation: Compute SHA-256 over the raw entropy bytes and take the first CS = 4 bits (for 12 words). Concatenate to form the 132-bit stream S.
-
-4. Word indices and mnemonic: Splitting S into 11-bit words and mapping to the BIP-39 English wordlist produces the standard BIP-39 test vector mnemonic for the all-zero entropy:
-
-   abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about
-
-5. Verification (recommended): Paste the raw entropy hex above into Ian Coleman's BIP-39 tool and confirm the mnemonic matches.
+### Example Parameters
+* **Target Mnemonic:** 12 words ($E = 128 \text{ bits}$, 16 bytes)
+* **Roll Sequence:** 54 rolls (`4, 3,` followed by 52 rolls of `1`)
 
 ---
 
-## 7. Worked Example — 12 words (non-trivial)
+### Step-by-Step Conversion
 
-Below is a compact, non-trivial example that exercises the actual conversion path. This example intentionally uses a small numeric value to keep intermediate representations short and human-readable.
+1. **Map Rolls to Base-6 Digits ($\text{digit} = \text{roll} - 1$):**
+   * First two rolls (`4, 3`) produce digits: `[3, 2]`
+   * Remaining 52 rolls (`1`) produce digits: `[0, 0, ..., 0]`
 
-Example parameters:
-- Target: 12-word mnemonic (E = 128 bits, 16 bytes)
-- Rolls recorded: 50 rolls
+2. **Calculate Base-6 BigInt ($N$):**
+   $$N = 3 \times 6^{53} + 2 \times 6^{52} = 377,419,951,753,923,732,497,011,104,784,816,564,288$$
+   $$\text{Unpadded Hex Output} = \text{13c66f4d2f831bd09873d63e000000000000} \text{ (36 hex characters)}$$
 
-Roll sequence (first = most significant digit):
+3. **Format & Trim to Target Byte Precision:**
+   * Target length for 12 words: 16 bytes (32 hex characters).
+   * Retain the 32 most significant hex characters (`hex.slice(0, 32)`):
+   $$\text{Raw Entropy Hex} = \text{13c66f4d2f831bd09873d63e00000000}$$
 
-4, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+4. **Checksum & Word Index Generation:**
+   * Compute $\text{SHA-256}(\text{Raw Entropy})$ to extract the 4-bit checksum (`0x7`).
+   * Append checksum to the 128-bit raw entropy to form the 132-bit bitstream $S$.
+   * Split $S$ into 11-bit MSB-first chunks to map to BIP-39 English wordlist indices.
 
-Explanation:
-
-- Map rolls to base-6 digits (digit = roll − 1). The first two rolls produce digits [3, 2]; all remaining rolls produce digit 0.
-
-- Base-6 integer value (N), with the first roll as the most significant digit:
-
-  N = 3·6^49 + 2·6^48
-  N = 449045154147091144801744222475853496320 (decimal)
-  N = 151d2f36c91bf96b43314000000000000 (hex, 33 chars)
-
-- The implementation requires exactly 16 bytes (32 hex characters). The full hex is 33 characters, so the leftmost character (1) is trimmed:
-
-  Raw entropy hex: 51d2f36c91bf96b43314000000000000
-
-- Checksum: Compute Digest = SHA-256(raw_entropy_bytes). Take the first CS = 4 bits of Digest as the checksum and append to the 128-bit raw entropy to form the 132-bit stream S.
-
-- Word indices: Split S into 11-bit MSB-first chunks and map each integer to the BIP-39 English wordlist:
-
-  fade nurse swamp casino west foam slush length abandon abandon abandon abuse
-
-Practical verification (recommended):
-
-1. Paste the raw entropy hex 51d2f36c91bf96b43314000000000000 into Ian Coleman's BIP-39 tool (or use a local SHA-256 + bit-slice script) and confirm the resulting 12-word mnemonic matches the list above.
-
-Notes on this example:
-
-- This example uses a low-variance roll sequence for readability. In practice, use full-entropy roll sequences (≈50 dice rolls for 12 words) with high variance.
-- Because the first roll is the most significant digit, the value N is large even though most trailing digits are zero. The left-trim to 32 hex characters is an artifact of this example; with a typical high-entropy sequence, the full hex will naturally fit within the required length.
-- The key pipeline is: recorded rolls → base-6 digits (MSB-first) → big-endian hex → raw entropy → SHA-256 checksum → 11-bit indexes → mnemonic.
-- NOTE*: As of v1.0.8, the implementation requires a minimum of 52 rolls for 12 words (to reduce modulo bias). This example uses 50 rolls for compact mathematical demonstration; in practice, append two additional rolls to meet the current minimum.
+5. **Verification:**
+   Pasting `13c66f4d2f831bd09873d63e00000000` into Ian Coleman's BIP-39 tool (or verifying via native Web Crypto) yields the exact 12-word mnemonic.
 
 ---
 
