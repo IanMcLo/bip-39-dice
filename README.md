@@ -7,14 +7,13 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
 [![HTML 100%](https://img.shields.io/badge/HTML-100%25-orange)]()
 
 ---
-
 ## 🚀 Quick Start
 
-1. Download `index.html` from this repository.  
-2. Disconnect from the internet.  
-3. Open the file in your browser.  
-4. Select your desired seed length (12, 15, 18, 21, or 24 words).  
-5. Roll your dice and enter the results — the live counter shows your progress.  
+1. Download `index.html` from this repository.
+2. Disconnect from the internet.
+3. Open the file in your browser.
+4. Select your desired seed length (12, 15, 18, 21, or 24 words).
+5. Roll your dice and enter the results — once the optimal roll threshold is reached (e.g., 54 rolls for 12 words), further inputs automatically lock to preserve exact entropy parameters.
 6. Click **Generate Mnemonic**.
 
 ---
@@ -22,7 +21,7 @@ A single, self‑contained HTML file that converts dice rolls into BIP39 mnemoni
 ## 📸 Screenshots
 
 ### 1. Input Dashboard – Enter your dice rolls  
-![Input UI](photos/screenshot-input.png)  
+![Input UI](photos/screenshots-input.jpg)  
 *Select your seed length, type dice rolls (space‑separated), and watch the live counter turn green when enough rolls are entered.*
 
 ### 2. Generated Seed Words  
