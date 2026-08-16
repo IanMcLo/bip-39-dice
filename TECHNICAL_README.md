@@ -302,7 +302,7 @@ This worked example demonstrates how a 54-roll sequence maps to raw entropy hex 
    * Remaining 52 rolls (`1`): digits `[0, 0, ..., 0]`
 
 2. **Calculate Base-6 BigInt ($N$):**
-   $$N = 3 \times 6^{53} + 2 \times 6^{52} = 377,419,951,753,923,732,497,011,104,784,816,564,288$$
+   $$N = 3 \times 6^{53} + 2 \times 6^{52} =  581,962,519,774,630,123,663,060,512,328,706,131,230,720$$
    $$\text{Unpadded Hex Output} = \text{0x6ae3bf055a1d9eaf0429540000000000000}
 \text{ (35 hex characters)}$$
 
