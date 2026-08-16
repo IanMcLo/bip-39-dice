@@ -966,10 +966,10 @@ ta.style.cssText = [
     console.log('🧹 Hard reset complete. Memory state nullified.');
   };
 
-  var btn = document.getElementById('hardResetBtn');
-  if (btn) {
-    btn.addEventListener('click', window.hardReset);
-  }
+  // NOTE: The click listener for #hardResetBtn is attached exclusively in the
+  // main DOMContentLoaded handler above. That handler clears the closure-scoped
+  // currentMnemonic / currentEntropy values and then calls window.hardReset(),
+  // so attaching a second listener here would run the reset twice per click.
 })();
 </script>
 <!-- ====== END RESET BUTTON ====== -->
