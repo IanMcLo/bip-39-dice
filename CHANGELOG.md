@@ -1,4 +1,23 @@
 # Changelog
+
+## v1.1.2
+
+ Enforce Fail-Closed Integrity Verification for Wordlist
+
+Updated wordlist verification to follow a **fail-closed** model, ensuring that corrupted or tampered wordlists automatically block phrase generation instead of acting as a passive UI indicator.
+
+* **Promisified Integrity Check:** Refactored the `verifyWordlist()` IIFE to store its execution result directly inside a top-level Promise (`WORDLIST_CHECK`).
+* **UI Hard Guard:** Added logic inside the verification IIFE to immediately set `btn.disabled = true` if the wordlist hash check fails (`!pass`).
+* **Execution Interceptor:** Injected an `await WORDLIST_CHECK` guard directly into the `generateBtn` click callback before mnemonic creation occurs. If the check resolves to `false`, an alert is triggered and execution halts immediately (`return`).
+
+
+## Impact
+
+* **Fail-Closed Security:** Prevents generation of invalid or non-BIP39 compliant seed phrases when wordlist integrity is compromised, even if the UI state becomes stale.
+* **Race Condition Protection:** Handles slow device environments seamlessly—tapping the generate button before verification completes pauses execution until the promise resolves, eliminating false integrity failures.
+* **Zero UX Degradation:** Zero change to normal user experience; for valid wordlists, the check seamlessly passes without user friction.
+* Release File Hash: 9e93f6b0aab5dc870ad43c6e2d9d38cec1d8bdc02cd17e5b4b0d0676b7d57e4e
+  
 ## v1.1.1
 
 Security fix: Corrected 64-bit message length encoding in the pure-JS SHA-256 fallback (`sha256Fallback`). JavaScript's `>>>` operator wraps shift counts modulo 32, causing the high 4 bytes of the length field to be encoded incorrectly. This produced invalid hashes for any non-empty message, which would result in invalid BIP39 checksums and mnemonics in environments without `crypto.subtle` (e.g., older browsers, non-secure contexts). Verified against all four NIST FIPS 180-2 test vectors.
