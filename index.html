@@ -60,6 +60,10 @@
       background: #ffc107;
       transform: scale(1.02);
     }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     button.secondary {
       background: #533483;
       color: #fff;
@@ -412,7 +416,7 @@ const WORDLIST = [
 // ============================================================
 const WORDLIST_SHA256 = '187db04a869dd9bc7be80d21a86497d692c0db6abd3aa8cb6be5d618ff757fae';
 
-(async function verifyWordlist() {
+const WORDLIST_CHECK = (async function verifyWordlist() {
   let pass = true;
   let msg = '';
 
@@ -473,6 +477,11 @@ const WORDLIST_SHA256 = '187db04a869dd9bc7be80d21a86497d692c0db6abd3aa8cb6be5d61
   box.textContent = pass
     ? '✅ Wordlist integrity verified: 2048 words, sorted, key words match, full hash valid.'
     : '❌ Wordlist integrity check failed: ' + msg;
+    if (!pass) {
+    const btn = document.getElementById('generateBtn');
+    if (btn) btn.disabled = true;
+  }
+  return pass;
 })();
 
 
@@ -721,6 +730,10 @@ document.addEventListener('DOMContentLoaded', function() {
   updateCounter();
 
   generateBtn.addEventListener('click', async function() {
+      if (!(await WORDLIST_CHECK)) {
+      alert('⛔ Wordlist integrity check failed. Refusing to generate a seed.');
+      return;
+    }
     const raw = diceInput.value;
     if (!raw.trim()) {
       alert('Please enter some dice rolls first.');
