@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.1.3
+
+Added Embedded Known Answer Self-Tests
+
+- Embedded known-answer self-tests (KATs), run on every page load:
+  - SHA-256 FIPS-180 vectors (pure-JS fallback + live wrapper)
+  - Rolls→entropy packing/trim vector (54-roll base-6 → 3bf055a1…)
+  - 4 official BIP-39 entropy→mnemonic vectors (128-bit + 256-bit)
+    
+- Any self-test failure is fail-closed: red status box, Generate disabled.
+  
+- Release File hash:
+ 7c64606457bf4cef529111efb854c9475495dc24cfe912d998685945cb181f05
+  
+
+
+
 ## v1.1.2
 
  Enforce Fail-Closed Integrity Verification for Wordlist
