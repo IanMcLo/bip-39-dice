@@ -18,11 +18,11 @@ Under the fair-die assumption this produces independent and identically distribu
 
 Shannon entropy per roll:
 
-H(X) = -sum_{x in {0,1}} P(X=x) log2 P(X=x) = -(0.5 log2 0.5 + 0.5 log2 0.5) = 1.00 bit/roll.
+$$H(X) = -\sum_{x \in \{0,1\}} P(X=x)\log_2 P(X=x) = 1.00 \text{ bit/roll}$$ 
 
 Min-entropy per roll (worst-case single-trial predictability):
 
-H_infinity(X) = -log2(max_x P(X=x)) = -log2(0.5) = 1.00 bit/roll.
+$$H_{\infty}(X) = -\log_2\left(\max_x P(X=x)\right) = 1.00 \text{ bit/roll}$$
 
 Because Shannon entropy and min-entropy are equal under p = 0.5, each mapped roll contributes one full bit of entropy in both average and worst-case senses prior to software processing.
 
@@ -47,21 +47,21 @@ Mnemonic Length | Raw Entropy E | Checksum bits CS = E / 32 | Total bits (E + CS
 
 Compute the SHA-256 digest over the raw entropy byte array as produced by the implementation (see Implementation notes on byte ordering):
 
-Digest = SHA-256(RawEntropy_bytes).
+$$\text{Digest} = \text{SHA-256}(\text{RawEntropy}_{bytes})$$
 
 Take the first CS bits of the Digest as the checksum bits (that is, the most significant bits of the digest stream):
 
-Checksum = Digest[0 : CS - 1].
+$$\text{Checksum} = \text{Digest}[0 : CS-1]$$
 
 Concatenate the raw entropy bitstring and the checksum bits to form the full bitstream S of length L = E + CS.
 
-Cryptographic note: SHA-256 is used only to compute deterministic checksum bits; it does not increase the min-entropy of the raw E-bit sequence. The attacker's search space is bounded by 2^E.
+Cryptographic note: SHA-256 is used only to compute deterministic checksum bits; it does not increase the min-entropy of the raw E-bit sequence. The attacker's search space is bounded by $2^E$.
 
 ### 2.3 11-bit Word Indices
 
 Partition S into contiguous 11-bit chunks and interpret each chunk in MSB-first order to produce the BIP-39 word indices (this is the standard BIP-39 interpretation). Formally, for k = 0, 1, …:
 
-W_k = sum_{i=0}^{10} S[11k + i] × 2^{10-i},
+$$W_k = \sum_{i=0}^{10} S[11k+i] \times 2^{10-i},$$
 
 where W_k is the integer value of the k-th 11-bit block in MSB-first bit ordering. Each W_k ∈ [0, 2047] indexes the BIP-39 English wordlist.
 
@@ -77,11 +77,11 @@ Short sample sizes and the chosen measurement resolution can create apparent red
 
 A uniformly random 160-bit string has expected number of ones
 
-mu = 160 × 0.5 = 80
+$$\mu = 160\times 0.5 = 80$$
 
 and standard deviation
 
-sigma = sqrt(160 × 0.5 × 0.5) = sqrt(40) ≈ 6.3246.
+$$\sigma = \sqrt{160 \times 0.5 \times 0.5} = \sqrt{40} \approx 6.3246$$
 
 Observing 82 ones corresponds to z = (82 - 80)/sigma ≈ 0.316, well within typical statistical fluctuation and not evidence of reduced entropy.
 
@@ -97,7 +97,7 @@ Practical recommendation: use bitwise statistics or aggregate many samples befor
 
 After generating and verifying the mnemonic, standard wallet software expands the mnemonic into a seed using PBKDF2-HMAC-SHA512 as specified by BIP-39:
 
-Seed = PBKDF2-HMAC-SHA512(Mnemonic, "mnemonic" || Passphrase, 2048, 512)
+$$\text{Seed} = \text{PBKDF2-HMAC-SHA512}(\text{Mnemonic}, \text{"mnemonic"} \,\|\, \text{Passphrase}, 2048, 512)$$
 
 This KDF both stretches and mixes the mnemonic (and optional passphrase), producing 512 bits of master seed material used by downstream HD key derivation (BIP-32, etc.). Because PBKDF2 is a pseudorandom function keyed by the mnemonic, it acts as a randomness extractor: small, non-adversarial statistical biases in the input are reduced by the PRF construction.
 
@@ -196,8 +196,7 @@ $$\Delta(P, U) \le \frac{2^{256}}{2 \cdot 6^{104}} = \frac{2^{256}}{2 \cdot 2^{2
 For a 256‑bit target, the bias is squeezed down to approximately 1 in 14,800. In cryptography, an advantage this small against an output space of $2^{256}$ is considered entirely negligible.
 
 ---
-
-## 6. Why Trimming Left (Lower‑Order Characters) is Mathematically Sound
+## 6. Why Keeping the Low-Order Characters (Trimming Left) is Mathematically Sound
 
 The specification requires keeping the lower‑order characters via `hex.slice(-requiredHexLen)`.
 
