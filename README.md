@@ -1,144 +1,49 @@
-# BIP39 Dice Roll Seed Generator
+# 🎲 BIP39 Dice Roll Seed Generator
 
-Generate Bitcoin BIP39 mnemonic seed phrases from physical dice rolls — offline, air‑gapped, and verified.  
-A single, self‑contained HTML file that converts dice rolls into BIP39 mnemonics using **standard base‑6 entropy conversion**. Zero dependencies, zero network calls, works entirely in your browser.
+A single-file, offline, cryptographically auditable BIP-39 seed phrase generator driven by physical dice rolls. 
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![HTML 100%](https://img.shields.io/badge/HTML-100%25-orange)]()
+Built for security purists: this tool uses **exact rejection sampling** to reduce modulo bias to mathematically **zero**, features on-load Known Answer Tests (KATs) that fail-closed, and includes a live Modulo Bias Audit Terminal so you can verify the math yourself.
 
----
-## 🚀 Quick Start
+## 🛡️ Security & Features
 
-1. Download `index.html` from this repository.
-2. Disconnect from the internet.
-3. Open the file in your browser.
-4. Select your desired seed length (12, 15, 18, 21, or 24 words).
-5. Roll your dice and enter the results — once the optimal roll threshold is reached (e.g., 54 rolls for 12 words), further inputs automatically lock to preserve exact entropy parameters.
-6. Click **Generate Mnemonic**.
+* **Zero Modulo Bias (Rejection Sampling):** Instead of bounding the bias, v1.1.4 eliminates it. The base-6 roll integer is mapped to the target $2^b$ space. If the integer falls into the remainder zone ($X \ge T$), the tool refuses to generate and asks you to re-roll.
+* **Live Modulo Bias Audit Terminal:** A floating action button (🔬) opens a live audit sheet showing the exact BigInt math (N, R, r, T, X) and the live verdict (✅ ACCEPT or ⛔ REJECT) on every keystroke.
+* **On-Load Self-Tests (Fail-Closed):** Every page load verifies the SHA-256 implementation, the official BIP-39 wordlist hash, the roll-to-entropy packing, and 4 official BIP-39 test vectors. If any test fails, the Generate button is disabled.
+* **Enhanced Entropy Buffers:** Minimum roll requirements have been increased by +1 across all tiers to maximize the cryptographic safety margin:
+  * **12 words:** 55 rolls (~142 bits raw)
+  * **15 words:** 66 rolls (~170 bits raw)
+  * **18 words:** 79 rolls (~204 bits raw)
+  * **21 words:** 92 rolls (~238 bits raw)
+  * **24 words:** 105 rolls (~271 bits raw)
+* **Memory Wipe:** A dedicated Hard Reset button explicitly nullifies closure-scoped variables and clears the DOM.
+* **Mobile-First & Desktop-Ready:** Responsive bottom sheets, collapsible status pills, and native numeric keypads for phones; centered audit cards for desktops.
 
----
+## 📦 Verification
 
-## 📸 Screenshots
+To ensure the file you downloaded hasn't been tampered with, verify the SHA-256 checksum.
 
-### 1. Input Dashboard – Enter your dice rolls  
-![Input UI](photos/screenshots-input.jpg)  
-*Select your seed length, type dice rolls (space‑separated), and watch the live counter turn green when enough rolls are entered.*
+**Option 1: Sidecar file (Linux/macOS)**
+Download `index.html.sha256` into the same folder and run:
+```bash
+sha256sum -c index.html.sha256
+# Expected output: index.html: OK
+```
 
-### 2. Generated Seed Words  
-![Seed Words](photos/screenshots-words.jpg)  
-*Your BIP39 mnemonic appears in a clean, numbered list for safe, easy transcription.*
+**Option 2: Manual Hash**
+Hash your local `index.html` file using any trusted SHA-256 tool and compare it against the published hash in `index.html.sha256`.
 
-### 3. Raw Entropy (Hex)  
-![Raw Entropy](photos/screenshots-entropy.jpg)  
-*The pre‑checksum raw entropy is displayed in hexadecimal format for cross‑verification with external tools.*
+## 💻 Usage
 
-### 4. Cross‑Verification with Ian Coleman
-![Verification](photos/screenshots-stats.jpg)  
-*Paste the raw entropy into [Ian Coleman's BIP39 tool](https://iancoleman.io/bip39/) to confirm the derived mnemonic matches exactly. The stats panel confirms the entropy strength (e.g., 256 bits, centuries to crack) – your dice rolls, your entropy, your keys, verified.*
-
----
-
-## ✨ Features
-
-* **Single HTML file** – no build step, no dependencies, no external scripts.
-* **Standard base-6 conversion** – dice rolls treated as a base-6 number ($1 \to 0, 2 \to 1, \dots, 6 \to 5$).
-* **Modulo Bias Mitigation** – elevated roll counts (54, 65, 78, 91, 104) ensure raw base-6 entropy exceeds target bit length, providing a safety margin against die bias.
-* **Strict Input Locking** – UI automatically caps text inputs and truncates paste operations once the exact target roll count is met.
-* **Multiple seed lengths** – 12 (54 rolls), 15 (65 rolls), 18 (78 rolls), 21 (91 rolls), or 24 words (104 rolls).
-* **Verified against Ian Coleman** – pasting generated raw entropy hex produces identical seed words, account keys, and addresses.
-* **Live roll counter** – real-time progress display with dynamic UI feedback upon reaching target thresholds.
-* **Wordlist integrity self-test** – cryptographically verifies the embedded BIP39 English wordlist (2048 words) via SHA-256 on every load.
-* **Copy-to-clipboard** – for both the mnemonic and raw entropy hex.
-* **Hard reset button** – wipes DOM state and nullifies closure-scoped JavaScript variables.
-* **Dark mode UI** – clean contrast designed for long dice-rolling sessions.
-
-
----
-
-## ⚙️ How It Works
-
-1. **Dice rolls → base-6 number**  
-   Each roll (1-6) is mapped to a digit (0-5). The full sequence is treated as one large base-6 integer.
-
-2. **Truncate or pad to entropy size**  
-   The integer is converted to bytes and truncated (or zero-padded) to the required entropy length:
-   * **12 words** → 128 bits (16 bytes, 54 rolls)
-   * **15 words** → 160 bits (20 bytes, 65 rolls)
-   * **18 words** → 192 bits (24 bytes, 78 rolls)
-   * **21 words** → 224 bits (28 bytes, 91 rolls)
-   * **24 words** → 256 bits (32 bytes, 104 rolls)
-
-3. **Append BIP39 checksum**  
-   SHA-256 of the entropy — first N bits become the checksum.
-
-4. **Map to words**  
-   Entropy + checksum split into 11-bit chunks, each indexing into the BIP39 English wordlist (2048 words).
-
-
----
-
-## 🔧 Technical Details
-
-| Parameter          | Value                                                       |
-|--------------------|-------------------------------------------------------------|
-| Wordlist           | BIP39 English (2048 words, sorted, verified)                |
-| Dice mapping       | 1→0, 2→1, 3→2, 4→3, 5→4, 6→5                               |
-| Entropy source     | Base‑6 integer from dice rolls                              |
-| Checksum           | SHA‑256 (Web Crypto API + pure‑JS fallback)                 |
-| Min rolls (12 wds) | 54                                                        |
-| Min rolls (24 wds) | 104                                                        |
-| Bits per roll      | ~2.585 (log₂6)                                              |
-
----
-
-## 🔒 Security
-
-Use this tool on an **air‑gapped** device only.
-
-- Save the HTML file, disconnect from the internet, then open it.  
-- **Never** type real dice rolls into a network‑connected device.  
-- Verify your dice are fair, balanced, and physically randomised.  
-- The file contains **no external scripts, no analytics, and no network calls**.  
-- All computation happens locally in your browser via the Web Crypto API with a **pure‑JS SHA‑256 fallback** for non‑secure contexts (`file://`, HTTP).
-
----
-
-## ⚠️ Verification & Compatibility
-
-**How to verify your seed is correct:**
-
-1. Generate your mnemonic and copy the **raw entropy hex** (displayed below the seed words).
-2. Paste the hex into [Ian Coleman's BIP39 tool](https://iancoleman.io/bip39/).
-3. Confirm the **mnemonic words match exactly**.
-
-**Important note on dice-roll compatibility:**
-
-This tool treats the first recorded die roll as the most significant base-6 digit. The full roll sequence is interpreted as a single base-6 integer, then converted to a big-endian hex string padded to the required byte length.
-- ✅ Your **seed phrase** and **entropy hex** are always correct and verifiable.
-- ✅ Pasting the entropy hex into Ian Coleman's tool will reproduce your seed words.
- - ⚠️ Different tools may convert dice rolls to entropy using different methods. Always verify by comparing the **entropy hex** and resulting mnemonic, not by re-entering dice rolls into other tools. 
-
-**The core security principle:** Your seed phrase is valid and independently verifiable from the displayed entropy hex. Different dice-conversion conventions may produce different entropy from the same rolls, so always verify the entropy hex and resulting mnemonic rather than re-entering the rolls into another tool.
-
----
-## Changelog
-See [CHANGELOG.md](CHANGELOG.md).
-
-
-## 🙏 Acknowledgements
-
-- [Ian Coleman](https://iancoleman.io/bip39/) for the canonical BIP39 reference implementation  
-- [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) – Bitcoin Improvement Proposal 39
-
----
+1. **Air-gap your device:** Disconnect from the internet.
+2. Open `index.html` in any modern browser.
+3. Wait for the green "✅ Wordlist + self-tests verified" pill to appear.
+4. Select your desired word count (12–24 words).
+5. Roll a physical 6-sided die and enter the numbers into the input field.
+6. Tap the 🔬 button to watch the live rejection sampling math.
+7. Once you hit the target roll count, tap **Generate Seed**.
+8. Write down your phrase, tap **Clear / Reset**, and power off the device.
 
 ## 📄 License
 
 MIT – use at your own risk. This is security‑critical software.  
-Review the code, verify the outputs against known test vectors, and **only use on air‑gapped devices**.
-
----
-
-> **⚠️ Important Compatibility Note**  
-> This tool uses the **base‑6 conversion** method (compatible with Ian Coleman's BIP39 page and Cobo Vault).  
-> It is **not** compatible with Coldcard or SeedSigner, which use SHA‑256 of the ASCII dice‑roll string. If you need to verify against those devices, use their official verification tools instead.
+Review the code, verify the outputs against known test vectors, and **only use on air‑gapped devices**.                                          
