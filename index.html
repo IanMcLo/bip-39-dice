@@ -143,6 +143,25 @@
       font-size: 1.2rem;
       letter-spacing: 2px;
     }
+    .wordlist-status { cursor: pointer; }
+    .wordlist-status.collapsed {
+      white-space: nowrap; overflow: hidden;
+      text-overflow: ellipsis; padding: 8px 12px;
+    }
+    @media (min-width: 768px) {
+      .wordlist-status.collapsed {
+        white-space: normal; overflow: visible;
+        text-overflow: clip; padding: 12px;
+      }
+      #auditSheet {
+        left: 50% !important; right: auto !important;
+        transform: translateX(-50%);
+        width: min(800px, 96vw);
+        border-radius: 12px 12px 0 0;
+      }
+      #auditOut { font-size: 0.85rem; }
+      #auditFab:hover { transform: scale(1.08); }
+    }
   </style>
 </head>
 <body>
@@ -155,18 +174,18 @@
 
   <label for="wordCount">Desired Seed Length:</label>
   <select id="wordCount" style="width:100%; padding:12px; border:1px solid #333; border-radius:6px; background:#0f3460; color:#fff; font-size:1.1rem; margin-top:5px; box-sizing:border-box;">
-    <option value="12">12 words (128-bit entropy, 54 dice rolls)</option>
-    <option value="15">15 words (160-bit entropy, 65 dice rolls)</option>
-    <option value="18">18 words (192-bit entropy, 78 dice rolls)</option>
-    <option value="21">21 words (224-bit entropy, 91 dice rolls)</option>
-    <option value="24" selected>24 words (256-bit entropy, 104 dice rolls)</option>
+    <option value="12">12 words (128-bit entropy, 55 dice rolls)</option>
+    <option value="15">15 words (160-bit entropy, 66 dice rolls)</option>
+    <option value="18">18 words (192-bit entropy, 79 dice rolls)</option>
+    <option value="21">21 words (224-bit entropy, 92 dice rolls)</option>
+    <option value="24" selected>24 words (256-bit entropy, 105 dice rolls)</option>
   </select>
 
   <label for="diceInput" style="margin-top:18px;">Dice Rolls (1-6, no other numbers):</label>
   <input type="text" id="diceInput" inputmode="numeric" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off" placeholder="e.g., 123456 123456 ...">
 
   <div id="rollCounter" style="margin-top:8px; font-size:0.95rem; color:#aaa;">
-    🎲 <strong>0</strong> rolls entered — need <strong>104</strong> more for 24 words
+    🎲 <strong>0</strong> rolls entered — need <strong>105</strong> more for 24 words
   </div>
 
   <div class="flex" style="margin-top:10px;">
@@ -175,6 +194,7 @@
   </div>
 
   <div id="wordlistStatus" class="wordlist-status">⏳ Checking wordlist...</div>
+
 </div>
 
 <div class="container" id="resultsContainer" style="display:none;">
@@ -439,8 +459,8 @@ const BIP39_KATS = [
 
 // D8 REPO keeps this line:
 //const ROLLS_KAT = { rolls: '3115121151211512115121151211512115121151212', hex: '80808080808080808080808080808080' };
-// D6 REPO keeps this line instead:
- const ROLLS_KAT = { rolls: '43' + '1'.repeat(52), hex: '3bf055a1d9eaf0429540000000000000' };
+// D6 REPO keeps this line instead (updated to 55 rolls, matching current 12-word requirement):
+ const ROLLS_KAT = { rolls: '43' + '1'.repeat(53), hex: '67a201cb1b81a18f7f80000000000000' };
 
 const WORDLIST_CHECK = (async function verifyWordlist() {
   let pass = true;
@@ -530,6 +550,7 @@ const WORDLIST_CHECK = (async function verifyWordlist() {
  box.textContent = pass
     ? '✅ Wordlist + self-tests verified: 2048 words, SHA-256 KATs, rolls→entropy KAT, and 4/4 official BIP-39 vectors pass.'
     : '❌ Integrity check failed: ' + msg;
+    if (pass) box.classList.add('collapsed');
     if (!pass) {
     const btn = document.getElementById('generateBtn');
     if (btn) btn.disabled = true;
@@ -664,31 +685,49 @@ function entropyToMnemonic(entropyHex) {
 }
 
 /**
- * Convert dice rolls to entropy hex.
- * Each die roll (1-6) is a base-6 digit (0-5).
- * We build a base-6 BigInt, then convert to base-16 (hex) with exact byte padding.
- * This ensures the hex string is always the correct length and matches the seed exactly.
+ * Convert dice rolls to entropy hex using bounded rejection sampling.
+ * Eliminates modulo bias completely by enforcing a mathematical cutoff threshold (T).
  */
-function rollsToEntropy(rollString, requiredBytes) {
-  const rolls = rollString.replace(/[^1-6]/g, '').split('').map(Number).map(n => n - 1);
-  if (rolls.length === 0) return '';
+function rollsToEntropy( rollString, requiredBytes) {
+    // Strip everything except numbers 1-6
+    const cleanStr = rollString.replace(/[^1-6]/g, '');
+    const rolls = cleanStr.split('').map(Number).map(n => n - 1);
+    
+    if (rolls.length === 0) return '';
 
-  // Build base-6 BigInt (first roll = most significant digit)
-  let num = 0n;
-  for (const roll of rolls) {
-    num = num * 6n + BigInt(roll);
-  }
+    // 1. Build the base-6 BigInt (first roll = most significant digit)
+    let num = 0n;
+    for (const roll of rolls) {
+        num = num * 6n + BigInt(roll);
+    }
 
-  // Convert to hex with exact required byte length
-  // We need requiredBytes * 2 hex characters, padded with leading zeros
-  const requiredHexLen = (requiredBytes || 32) * 2;
-  let hex = num.toString(16);
-  if (hex.length > requiredHexLen) {
-    hex = hex.slice(-requiredHexLen); // trim excess from left if too long
-  } else {
-    hex = hex.padStart(requiredHexLen, '0'); // pad with leading zeros if too short
-  }
-  return hex;
+    // 2. Compute the exact mathematical safety boundaries
+    const totalPossibleRange = 6n ** BigInt(rolls.length);
+    const targetBits = BigInt(requiredBytes * 8);
+    const targetModulus = 2n ** targetBits;
+    
+    // Calculate the leftover biased remainder block
+    const remainder = totalPossibleRange % targetModulus;
+    const T = totalPossibleRange - remainder; // The Perfect Uniformity Boundary
+
+    // 3. Perform the Bounded Rejection Sampling Check
+ if (num >= T) {
+        const rejectPct = ((Number(totalPossibleRange - T) / Number(totalPossibleRange)) * 100).toFixed(3);
+        throw new Error(
+            `⛔ REJECTION SAMPLING TRIGGERED\n\n` +
+            `Your roll sequence fell into the ${rejectPct}% modulo bias zone (X ≥ T).\n\n` +
+            `For perfect mathematical safety, tap "Clear Rolls" and roll the physical dice again.`
+        );
+    }
+
+    // 4. Extract perfectly uniform bits using standard modulo
+    const unbiasedEntropyInt = num % targetModulus;
+
+    // 5. Convert to clean hex format with exact byte padding
+    const requiredHexLen = requiredBytes * 2;
+    let hex = unbiasedEntropyInt.toString(16);
+    
+    return hex.padStart(requiredHexLen, '0');
 }
 
 // ============================================================
@@ -712,12 +751,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
   const REQUIRED_BYTES = {12: 16, 15: 20, 18: 24, 21: 28, 24: 32};
   const REQUIRED_ROLLS = {
-    12: 54,   // 139.6 bits raw for 128-bit target (extra safety buffer)
-    15: 65,   // 168.0 bits raw for 160-bit target
-    18: 78,   // 201.6 bits raw for 192-bit target
-    21: 91,   // 235.2 bits raw for 224-bit target
-    24: 104   // 268.8 bits raw for 256-bit target
+    12: 55,   // 142.2 bits raw for 128-bit target (buffer ~14.2b, P(reject)~1/18.5k)
+    15: 66,   // 170.6 bits raw for 160-bit target (buffer ~10.6b, P(reject)~1/1.6k)
+    18: 79,   // 204.2 bits raw for 192-bit target (buffer ~12.2b, P(reject)~1/4.7k)
+    21: 92,   // 237.8 bits raw for 224-bit target (buffer ~13.8b, P(reject)~1/14.4k)
+    24: 105   // 271.4 bits raw for 256-bit target (buffer ~15.4b, P(reject)~1/43.9k)
   };
+
+
+  function updateAudit() {
+    const out = document.getElementById('auditOut');
+    if (!out) return;
+    const clean = diceInput.value.replace(/[^1-6]/g, '');
+    const k = clean.length;
+    const words = parseInt(wordCountSelect.value, 10);
+    const b = REQUIRED_BYTES[words] * 8;
+    const H = k * Math.log2(6);
+
+    const L = [`target ${words}w / ${b}b`,
+               `rolls ${k}/${REQUIRED_ROLLS[words]}`,
+               `H=${H.toFixed(2)}b buffer=${(H - b).toFixed(2)}b`];
+    if (k > 0) {
+      const N = 6n ** BigInt(k), R = 1n << BigInt(b);
+      const r = N % R, T = N - r;
+      let X = 0n; for (const c of clean) X = X * 6n + BigInt(Number(c) - 1);
+      L.push(`N=${N.toString(16).slice(0, 8)}… (${N.toString(2).length}b)`,
+             `r=${r.toString(16).slice(0, 8)}… T=${T.toString(16).slice(0, 8)}…`,
+             `X=${X.toString(16).slice(0, 8)}…`,
+             `P(reject)≈1/${Math.round(Math.pow(2, H - b)).toLocaleString()}`,
+             X < T ? 'verdict ✅ ACCEPT (uniform)'
+                   : 'verdict ⛔ REJECT — clear & re-roll');
+    }
+    out.textContent = L.join('\n');
+  }
 
   function updateCounter() {
     const raw = diceInput.value;
@@ -766,6 +832,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     updateCounter();
+    updateAudit(); 
   });
 
   // 3. Auto-adjust input string length if dropdown changes to a smaller word target
@@ -778,9 +845,11 @@ document.addEventListener('DOMContentLoaded', function() {
       diceInput.value = clean.slice(0, requiredRolls);
     }
     updateCounter();
+    updateAudit(); 
   });
 
   updateCounter();
+    updateAudit(); 
 
   generateBtn.addEventListener('click', async function() {
       if (!(await WORDLIST_CHECK)) {
@@ -828,8 +897,19 @@ document.addEventListener('DOMContentLoaded', function() {
     currentMnemonic = [];
     currentEntropy = '';
     updateCounter();
+    updateAudit(); 
   });
-
+// ---- UI polish: status pill toggle + floating audit sheet ----
+  document.getElementById('wordlistStatus').addEventListener('click', function() {
+    this.classList.toggle('collapsed');
+  });
+  document.getElementById('auditFab').addEventListener('click', function() {
+    document.getElementById('auditSheet').style.display = 'block';
+    updateAudit();
+  });
+  document.getElementById('auditClose').addEventListener('click', function() {
+    document.getElementById('auditSheet').style.display = 'none';
+  });
   // Hard reset integration
   const hardResetBtn = document.getElementById('hardResetBtn');
   if (hardResetBtn) {
@@ -996,6 +1076,23 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 </script>
 <!-- ====== END RESET BUTTON ====== -->
+ <button id="auditFab" aria-label="Open bias audit terminal"
+  style="position:fixed;right:14px;bottom:14px;width:52px;height:52px;
+  border-radius:50%;background:#0f3460;border:2px solid #f0a500;
+  font-size:1.5rem;z-index:99;box-shadow:0 4px 12px rgba(0,0,0,.5);">🔬</button>
 
+<div id="auditSheet" style="display:none;position:fixed;left:0;right:0;bottom:0;
+  background:#16213e;border-top:2px solid #f0a500;padding:14px;z-index:100;
+  max-height:62vh;overflow-y:auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:8px;">
+    <strong style="color:#f0a500;">🔬 Modulo Bias Audit Terminal</strong>
+    <button id="auditClose" style="background:#533483;color:#fff;border:none;
+      border-radius:4px;padding:6px 12px;font-weight:bold;">✖</button>
+  </div>
+  <pre id="auditOut" style="background:#0a0a1a;color:#8be9fd;padding:12px;
+    border:1px solid #333;border-radius:8px;font-size:0.78rem;
+    white-space:pre-wrap;word-break:break-all;line-height:1.4;">Waiting for dice rolls...</pre>
+</div>
 </body>
 </html>
