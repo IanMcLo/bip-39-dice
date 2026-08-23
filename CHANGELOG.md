@@ -1,5 +1,26 @@
 # Changelog
 
+##  v1.1.4 
+### Added
+- **Bounded Rejection Sampling:** Replaced the bounded-bias trim with exact rejection sampling. Modulo bias is now mathematically **zero**. If the base-6 roll integer falls into the remainder zone ($X \ge T$), generation is safely refused.
+- **Modulo Bias Audit Terminal:** A floating action button (🔬) opens a live bottom sheet detailing the exact BigInt math (N, R, r, T, X) and the live accept/reject verdict on every keystroke.
+- **Collapsible Status Pill:** The on-load self-test success message now collapses to a single line on mobile to save screen space (tap to expand).
+- **Desktop-Responsive Sheet:** The audit terminal bottom sheet becomes a centered 800px card with rounded corners on screens ≥768px wide.
+
+### Changed
+- **Enhanced Entropy Buffer:** Increased the minimum required dice rolls by exactly +1 for each word tier to further widen the cryptographic safety margin:
+  - 12 words: 54 → **55 rolls** (~142.2 bits raw)
+  - 15 words: 65 → **66 rolls** (~170.6 bits raw)
+  - 18 words: 78 → **79 rolls** (~204.2 bits raw)
+  - 21 words: 91 → **92 rolls** (~237.8 bits raw)
+  - 24 words: 104 → **105 rolls** (~271.4 bits raw)
+- **Mobile-Friendly Alerts:** Rejection alert messages are now concise; removed giant BigInt printouts that caused mobile scrolling issues.
+
+### Security
+- Self-tests remain fail-closed. The rejection sampling guarantees exactly uniform entropy.
+
+*Release File Hash: ` b5013912373893fc1593c8d8ca723685684500c8393f3efddc91ffb973017ebe`*
+
 ## v1.1.3
 
 Added Embedded Known Answer Self-Tests
