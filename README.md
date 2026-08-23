@@ -43,6 +43,9 @@ Hash your local `index.html` file using any trusted SHA-256 tool and compare it 
 7. Once you hit the target roll count, tap **Generate Seed**.
 8. Write down your phrase, tap **Clear / Reset**, and power off the device.
 
+> 🌐 A live demo is available at https://ianmclo.github.io/bip-39-dice/
+> for evaluation only. For real seed generation, use the downloaded,
+> checksum-verified file on an air-gapped device.
 ## 📄 License
 
 MIT – use at your own risk. This is security‑critical software.  
