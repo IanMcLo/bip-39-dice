@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.1.5
+
+### Input Validation and UX
+
+- Replaced silent D6-input filtering with strict validation and visible error feedback.
+- Added `parseRollString()` and wired it into entropy generation.
+- Added support for optional whitespace between rolls while preserving compact input.
+- Invalid characters now remain visible, receive `.invalid` styling, and disable Generate.
+- Updated word-count changes and reset actions to preserve consistent validation behavior.
+- Added safeguards so input validation cannot override a failed wordlist integrity check.
+
+### Verification
+
+- Re-ran JavaScript syntax checks, SHA-256 tests, BIP-39 vectors, and the D6 roll-to-entropy known-answer test.
+- Confirmed compact and whitespace-separated roll strings produce identical entropy.
+- Preserved the existing bounded rejection-sampling entropy conversion and security protections.
+
+_Release File Hash: `a0905fb1e07500af38a8ca0d93e3268492eff04f743df1f3e917f3ed45881fdb`_
+
+
 ##  v1.1.4 
 ### Added
 - **Bounded Rejection Sampling:** Replaced the bounded-bias trim with exact rejection sampling. Modulo bias is now mathematically **zero**. If the base-6 roll integer falls into the remainder zone ($X \ge T$), generation is safely refused.
