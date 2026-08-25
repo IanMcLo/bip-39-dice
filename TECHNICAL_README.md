@@ -2,8 +2,6 @@
 
 This document describes the information-theoretic foundations, entropy bounds, framing pipeline, and security model of the `bip-39-dice` physical seed generator. It is intended as a precise, implementable reference for auditors and advanced users.
 
-> **v1.1.4 note:** This revision documents a change from unconditional modulo reduction (which left a small, permanent statistical bias in every output) to **bounded rejection sampling** (which makes every *accepted* output exactly uniform, at the cost of occasionally asking the operator to re-roll). Required roll counts increased by one roll per tier to reduce how often that occurs. Sections 5, 6, 7, 9, and 11 have been rewritten; Sections 1–4, 8, and 10 are structurally unchanged.
-
 ---
 
 ## 1. Information-Theoretic Foundations
@@ -12,18 +10,18 @@ This document describes the information-theoretic foundations, entropy bounds, f
 
 The physical entropy source is repeated independent rolls of a fair six-sided die. For the purposes of estimating binary entropy, we map each roll to one bit using a simple partition:
 
-- Roll ∈ {1, 2, 3} → 0
-- Roll ∈ {4, 5, 6} → 1
+- $\text{Roll} \in \{1, 2, 3\} \to 0$
+- $\text{Roll} \in \{4, 5, 6\} \to 1$
 
-Under the fair-die assumption this produces independent and identically distributed (i.i.d.) Bernoulli trials with p = 0.5.
+Under the fair-die assumption this produces independent and identically distributed (i.i.d.) Bernoulli trials with $p = 0.5$.
 
 Shannon entropy per roll:
 
-$H(X) = -sum_{x in {0,1}} P(X=x) log2 P(X=x) = -(0.5 log2 0.5 + 0.5 log2 0.5) = 1.00$ bit/roll$.
+$$H(X) = -\sum_{x \in \{0,1\}} P(X=x) \log_2 P(X=x) = -(0.5 \log_2 0.5 + 0.5 \log_2 0.5) = 1.00 \text{ bit/roll}$$
 
 Min-entropy per roll (worst-case single-trial predictability):
 
-$$H_/infinity(X) = -log2(max_x P(X=x)) = -log2(0.5) = 1.00 bit/roll$$.
+$$H_\infty(X) = -\log_2\left(\max_x P(X=x)\right) = -\log_2(0.5) = 1.00 \text{ bit/roll}$$
 
 Because Shannon entropy and min-entropy are equal under p = 0.5, each mapped roll contributes one full bit of entropy in both average and worst-case senses prior to software processing.
 
@@ -37,7 +35,7 @@ Note: This binary mapping is for entropy accounting and statistical analysis. Th
 
 BIP-39 requires raw entropy lengths E that are multiples of 32 bits. Standard choices and corresponding checksum lengths are:
 
-| Mnemonic Length | Raw Entropy E | Checksum bits CS = E / 32 | Total bits (E + CS) |
+| Mnemonic Length | Raw Entropy $E$ | Checksum bits $CS = E / 32$ | Total bits ($E + CS$) |
 |---|---|---|---|
 | 12 words | 128 | 4 | 132 |
 | 15 words | 160 | 5 | 165 |
@@ -47,27 +45,27 @@ BIP-39 requires raw entropy lengths E that are multiples of 32 bits. Standard ch
 
 ### 2.2 Checksum Derivation (SHA-256)
 
-Compute the SHA-256 digest over the raw entropy byte array as produced by the implementation:
+Compute the SHA-256 digest over the raw entropy byte array as produced by the implementation (see Implementation notes on byte ordering):
 
-Digest = SHA-256(RawEntropy_bytes).
+$$\text{Digest} = \text{SHA-256}(\text{RawEntropy\_bytes})$$
 
-Take the first CS bits of the Digest as the checksum bits (the most significant bits of the digest stream):
+Take the first $CS$ bits of the Digest as the checksum bits (that is, the most significant bits of the digest stream):
 
-Checksum = Digest[0 : CS - 1].
+$$\text{Checksum} = \text{Digest}[0 : CS - 1]$$
 
-Concatenate the raw entropy bitstring and the checksum bits to form the full bitstream S of length L = E + CS.
+Concatenate the raw entropy bitstring and the checksum bits to form the full bitstream $S$ of length $L = E + CS$.
 
-Cryptographic note: SHA-256 is used only to compute deterministic checksum bits; it does not increase the min-entropy of the raw E-bit sequence. The attacker's search space is bounded by 2^E.
+Cryptographic note: SHA-256 is used only to compute deterministic checksum bits; it does not increase the min-entropy of the raw $E$-bit sequence. The attacker's search space is bounded by $2^E$.
 
 ### 2.3 11-bit Word Indices
 
-Partition S into contiguous 11-bit chunks and interpret each chunk in MSB-first order to produce the BIP-39 word indices:
+Partition $S$ into contiguous 11-bit chunks and interpret each chunk in MSB-first order to produce the BIP-39 word indices (this is the standard BIP-39 interpretation). Formally, for $k = 0, 1, \ldots$:
 
-$W_k = sum_{i=0}^{10} S[11k + i] × 2^{10-i}$,
+$$W_k = \sum_{i=0}^{10} S[11k + i] \times 2^{10-i}$$
 
-where W_k is the integer value of the k-th 11-bit block in MSB-first bit ordering. Each W_k ∈ [0, 2047] indexes the BIP-39 English wordlist.
+where $W_k$ is the integer value of the $k$-th 11-bit block in MSB-first bit ordering. Each $W_k \in [0, 2047]$ indexes the BIP-39 English wordlist.
 
-Implementation caveat: the bitstream S is constructed from the raw entropy bytes using the implementation's byte ordering. Always verify using the displayed raw entropy hex.
+Implementation caveat: the bitstream $S$ is constructed from the raw entropy bytes using the implementation's byte ordering. That means the sequence of bits used to form 11-bit words depends on how rolls are packed into bytes. Always verify using the displayed raw entropy hex.
 
 ---
 
@@ -79,17 +77,17 @@ Short sample sizes and the chosen measurement resolution can create apparent red
 
 A uniformly random 160-bit string has expected number of ones
 
-$\mu = 160 × 0.5 = 80$
+$$\mu = 160 \times 0.5 = 80$$
 
 and standard deviation
 
-$\sigma = sqrt(160 × 0.5 × 0.5) = sqrt(40) ≈ 6.3246$.
+$$\sigma = \sqrt{160 \times 0.5 \times 0.5} = \sqrt{40} \approx 6.3246$$
 
-Observing 82 ones corresponds to $$z = (82 - 80)/sigma ≈ 0.316$$, well within typical statistical fluctuation and not evidence of reduced entropy.
+Observing 82 ones corresponds to $z = (82 - 80)/\sigma \approx 0.316$, well within typical statistical fluctuation and not evidence of reduced entropy.
 
 ### 3.2 Byte-Level Sampling Artifacts
 
-When viewing N = 20 bytes (160 bits) as 8-bit symbols, the maximum empirical frequency for a distinct byte value is 1/20 = 0.05 if all bytes are distinct. A naive calculation using that per-byte frequency as if bytes were independent symbols can under-estimate entropy for short samples.
+When viewing $N = 20$ bytes (160 bits) as 8-bit symbols, the maximum empirical frequency for a distinct byte value is $1/20 = 0.05$ if all bytes are distinct. A naive calculation using that per-byte frequency as if bytes were independent symbols can under-estimate entropy for short samples.
 
 Practical recommendation: use bitwise statistics or aggregate many samples before inferring entropy degradation.
 
@@ -99,102 +97,87 @@ Practical recommendation: use bitwise statistics or aggregate many samples befor
 
 After generating and verifying the mnemonic, standard wallet software expands the mnemonic into a seed using PBKDF2-HMAC-SHA512 as specified by BIP-39:
 
-Seed = PBKDF2-HMAC-SHA512(Mnemonic, "mnemonic" || Passphrase, 2048, 512)
+$$\text{Seed} = \text{PBKDF2-HMAC-SHA512}(\text{Mnemonic},\ \text{"mnemonic"} \parallel \text{Passphrase},\ 2048,\ 512)$$
 
 This KDF both stretches and mixes the mnemonic (and optional passphrase), producing 512 bits of master seed material used by downstream HD key derivation (BIP-32, etc.). Because PBKDF2 is a pseudorandom function keyed by the mnemonic, it acts as a randomness extractor: small, non-adversarial statistical biases in the input are reduced by the PRF construction.
 
-Security note: the extracted seed's security cannot exceed the entropy in the original mnemonic; thus the dominant security parameter is the raw entropy length E.
+Security note: the extracted seed's security cannot exceed the entropy in the original mnemonic; thus the dominant security parameter is the raw entropy length $E$.
 
 ---
 
-## 5. Bounded Rejection Sampling: Exact Elimination of Modulo Bias
+## 5. Bounded Rejection Sampling: Eliminating Modulo Bias Exactly
 
-**This section replaces the "over-sampling bounds the bias" argument used in prior revisions.** The current implementation does not merely make bias *small* — it makes bias **exactly zero** for every mnemonic it actually produces. The trade-off is that a small, disclosed fraction of roll sequences are rejected outright and must be re-rolled from scratch, rather than silently accepted with a residual skew.
+Modulo bias occurs when a total number of outcomes ($N$) is mapped into a target range ($R$) via a modulo operation, and $N$ is not perfectly divisible by $R$. This leaves some outcomes with a slightly higher probability of appearing than others.
 
-### 5.a Defining the Spaces
+An earlier version of this tool mitigated bias purely through over-sampling: gathering more raw entropy than needed and accepting that a small residual bias remained mathematically negligible. **The current implementation goes further and eliminates the bias entirely** by rejecting any roll sequence that would land in the biased zone, rather than accepting it.
 
-Let $k$ be the number of dice rolls. The total number of unique base-6 outcomes is:
+### a. Defining the Spaces
+
+Let $k$ be the number of dice rolls. The total number of unique base‑6 outcomes is:
 
 $$N = 6^k$$
 
-Let $b$ be the target number of bits (e.g., 128 bits for 12 words, 256 bits for 24 words). The target range is:
+Let $b$ be the target number of bits (e.g., 128 bits for 12 words, 256 bits for 24 words). The target range of the output space is:
 
 $$R = 2^b$$
 
-Because $6^k$ is never an exact multiple of $2^b$ in this parameter regime — $6^k = 2^k \cdot 3^k$ has exactly $k$ factors of 2, and $k$ is always far smaller than $b$ — $N$ never divides evenly into $R$-sized buckets. Let
+Because $6^k$ is never a perfect power of 2, mapping $N$ outcomes onto $R$ buckets can never be perfectly even. Let $q = \lfloor N/R \rfloor$ and $r = N \bmod R$. Then $r$ buckets would receive $q+1$ values and $R-r$ buckets would receive $q$ values under naive modulo reduction — this is the source of the bias.
 
-$$r = N \bmod R, \qquad T = N - r$$
+### b. The Rejection Boundary
 
-$T$ is the **largest multiple of $R$ that is $\le N$**.
+Define the **uniformity boundary**:
 
-### 5.b The Rejection Rule
+$$T = N - r = N - (N \bmod R)$$
 
-Given the BigInt $X$ formed from the dice rolls ($0 \le X < N$):
+$T$ is the largest multiple of $R$ that is $\le N$. Let $X$ be the integer formed by treating the dice rolls as base-6 digits (first roll = most significant digit, digit = roll − 1).
 
-- **If $X \ge T$:** reject. This range holds exactly $r$ leftover outcomes that cannot be split evenly across the $R$ buckets. The generator halts, discards the sequence, and instructs the operator to clear all rolls and re-roll from scratch.
-- **If $X < T$:** accept. Output $X \bmod R$.
+- **If $X \ge T$** (the roll sequence fell into the biased remainder zone): **reject**. The tool refuses to generate and asks the operator to clear the input and re-roll.
+- **If $X < T$**: **accept**. Compute the output as $X \bmod R$.
 
-### 5.c Why This Is *Exact*, Not Approximate
+Because every accepted output is drawn from an integer range of exactly $T$, which is by construction an exact multiple of $R$, **every one of the $R$ output buckets receives exactly $T/R$ accepted inputs — mapping is perfectly uniform over the target range whenever a sequence is accepted.** There is no residual bias to bound; the bias is removed by construction, not merely made small.
 
-The interval $[0, T)$ contains exactly $T = qR$ outcomes, where $q = T/R$ is an integer. Because $T$ is by construction a multiple of $R$, the map $X \mapsto X \bmod R$ sends **exactly $q$** values of $X$ to each of the $R$ possible outputs — no output is favored over any other. This is a discrete counting fact, not a statistical bound:
+### c. Rejection Probability Per Tier
 
-$$\forall\, v \in [0, R): \; \left|\{X \in [0, T) : X \bmod R = v\}\right| = q$$
+The rejection probability $P(\text{reject}) = r/N$ depends only on the roll count $k$ and target bits $b$ — not on the specific dice values rolled — so it is a fixed, exactly computable quantity for each tier, not an estimate:
 
-So conditioned on acceptance, the output is **perfectly uniform** over $[0, R)$. Total variation distance from uniform is exactly $0$ for accepted outputs — there is no residual bias to bound or reason about probabilistically.
+| Words | Rolls ($k$) | Target ($b$) | Raw bits $H = k\log_2 6$ | Buffer ($H-b$) | Exact $P(\text{reject}) = r/N$ |
+|---|---|---|---|---|---|
+| 12 | 55 | 128 | 142.173 | 14.173 | 0.002862% (1 in 34,938) |
+| 15 | 66 | 160 | 170.608 | 10.608 | 0.01350% (1 in 7,409) |
+| 18 | 79 | 192 | 204.212 | 12.212 | 0.01035% (1 in 9,666) |
+| 21 | 92 | 224 | 237.817 | 13.817 | 0.004599% (1 in 21,743) |
+| 24 | 105 | 256 | 271.421 | 15.421 | 0.001167% (1 in 85,691) |
 
-### 5.d Quantifying the Rejection Probability
-
-The only remaining question is *how often* generation is rejected, not *how biased* the output is when accepted:
-
-$$P(\text{reject}) = \frac{r}{N} = \frac{N \bmod R}{N}$$
-
-Because $r < R$ always, this is strictly bounded above by:
-
-$$P(\text{reject}) < \frac{R}{N} = 2^{-(H - b)}, \quad \text{where } H = k \cdot \log_2(6)$$
-
-This $2^{-(\text{Buffer}_{\text{bits}})}$ figure is a **provable worst-case upper bound**, useful for choosing roll counts in advance. The *exact* rejection probability depends on the specific residue $6^k \bmod 2^b$ and must be computed directly; it is always at least as good as (i.e., no larger than) the bound above.
-
-### 5.e Case Analysis, Current Roll Counts
-
-The table below gives both the worst-case bound (from the buffer-bits estimate) and the **exact** rejection probability computed directly from $N \bmod R$, for the roll counts currently used by the generator.
-
-| Words | Rolls ($k$) | Target bits ($b$) | Raw bits ($H = k\log_2 6$) | Buffer ($H-b$) | Bound: $2^{-\text{Buffer}}$ | **Exact** $P(\text{reject})$ |
-|---|---|---|---|---|---|---|
-| 12 | 55 | 128 | 142.17 | 14.17 | 1 in 18,471 | **1 in 34,938** |
-| 15 | 66 | 160 | 170.61 | 10.61 | 1 in 1,560 | **1 in 7,409** |
-| 18 | 79 | 192 | 204.21 | 12.21 | 1 in 4,744 | **1 in 9,666** |
-| 21 | 92 | 224 | 237.82 | 13.82 | 1 in 14,428 | **1 in 21,743** |
-| 24 | 105 | 256 | 271.42 | 15.42 | 1 in 43,874 | **1 in 85,691** |
-
-Every tier's exact rejection rate is better than its worst-case bound, but the bound is what should be used when reasoning about new roll counts, since the exact value depends on arithmetic idiosyncrasies of $6^k \bmod 2^b$ for that specific $k$.
-
-**Interpretation:** an operator will, on average, need to re-roll an entire sequence somewhere between roughly 1-in-7,400 and 1-in-86,000 times depending on word count. This is a usability cost, not a security concern — a rejected sequence is simply never converted into output, so it never affects the security of any mnemonic that *is* produced.
+Note: $R/N = 2^{-\text{buffer}}$ is the standard *worst-case upper bound* on $P(\text{reject})$ (equivalently, the bound used in the older over-sampling analysis, $\Delta(P,U) \le R/2N$). The exact value $r/N$ shown above is always at or below that bound — in practice roughly half of it — because $r$ is not, in general, equal to $R$. Either figure is small enough to be operationally negligible; on rejection, simply clear the input and re-roll the full sequence.
 
 ---
 
-## 6. Retired: "Trimming Left" Justification
+## 6. Why $X \bmod R$ (Keeping the Low-Order Bits) Is the Correct Reduction
 
-Earlier revisions of this document justified taking the low-order hex characters of the base-6 integer (`hex.slice(-requiredHexLen)`) as an informal argument that the final dice rolls "flip the low bits chaotically" and therefore the truncated output was safe to use unconditionally, with the residual bias absorbed by an oversampling buffer.
+Once a roll sequence is accepted (Section 5b), the raw entropy is computed as $X \bmod R$, equivalently expressed as retaining only the low-order $b$ bits of $X$'s binary representation (or, in hex form, the low-order $b/4$ hex characters of $X$'s full hex expansion, left-padded with zeros to the required length if $X$ is short).
 
-**That argument, and the code path it described, are no longer applicable.** The current implementation does not unconditionally truncate. It performs the explicit accept/reject test in Section 5 before any reduction occurs, and only *then* reduces via `X mod 2^b` — which, restricted to the accepted domain $[0, T)$, is exactly uniform by the counting argument above rather than merely "probably fine." Auditors reviewing older forks or cached copies of this tool should confirm which code path (unconditional modulo vs. gated rejection sampling) is actually present before relying on either justification.
+This is mathematically sound independent of the rejection step:
+
+- The high-order bits of $X$ are disproportionately influenced by the earliest rolls and by which multiple-of-$R$ block $X$ falls into — this is exactly the structure that produces bias if used directly.
+- The low-order bits are the product of every roll's contribution compounding through repeated multiplication by 6 and are, for a uniformly-rolled $X$ in an accepted (sub-$T$) range, uniformly distributed over $[0, R)$.
+
+Combined with Section 5's rejection gate, this reduction is exact rather than approximate: rejection guarantees the pre-reduction range is a clean multiple of $R$, and modulo reduction over a clean multiple of $R$ is provably uniform — not merely low-bias.
 
 ---
 
 ## 7. Implementation & Interoperability Notes
 
-- **Byte/bit ordering:** The implementation treats the first recorded die roll as the most significant base-6 digit (MSB-first). The accumulated base-6 integer $X$ is compared against the rejection threshold $T$ (Section 5) *before* any formatting occurs.
+- **Byte/bit ordering:** The implementation treats the first recorded die roll as the most significant base-6 digit (MSB-first). The accumulated base-6 integer is reduced via bounded rejection sampling (Section 5) and the accepted result is converted to a big-endian hex string, zero-padded to the target byte length.
 
-- **Rejection gate:** If $X \ge T$, the generator throws immediately and displays the exact rejection percentage for the selected tier; no entropy, hex, or mnemonic is produced or displayed. The operator must clear all rolls and re-enter a fresh sequence — partially editing a rejected sequence does not restore the uniformity guarantee, since the accept/reject decision and the modulo reduction both depend on the *entire* sequence as a single integer.
+- **Rejection Sampling, Not Truncation:** Earlier versions of this document described a truncate-only strategy with an accepted residual bias. The shipped implementation instead performs the accept/reject test in Section 5 before reduction. On rejection, the UI raises `⛔ REJECTION SAMPLING TRIGGERED` and disables generation for that input; the operator must clear the field and re-roll.
 
-- **Modulo reduction (accepted case only):** If $X < T$, the output is $X \bmod 2^b$, formatted to the exact target byte length ($2 \times \text{requiredBytes}$ hex characters), left-padded with zeros if necessary.
+- **Elevated Roll Counts:** Minimum roll counts (55 rolls for 12 words up to 105 rolls for 24 words — see the table in Section 5c) provide the raw-entropy buffer above the target bit length that keeps rejection rare across all tiers (worst case roughly 1 in 7,400).
 
-- **Elevated roll counts:** Roll counts per tier (55 / 66 / 79 / 92 / 105 for 12/15/18/21/24 words respectively) are chosen to keep the exact rejection probability low — see Section 5.e — while keeping the number of physical dice rolls an operator must perform manageable. These counts include a full extra roll beyond the previous revision's counts, specifically to reduce how often the rejection path is hit.
+- **Strict Input Validation:** The dice-roll input field accepts only digits 1–6 and optional whitespace. Any other character is flagged immediately as an error and disables generation rather than being silently discarded — this prevents a mistyped character from quietly changing the entropy input without the operator's knowledge.
 
-- **Input Locking & UX Boundaries:** The UI enforces strict input locking upon reaching the exact target roll count for the selected tier (55, 66, 79, 92, or 105 rolls). Keystrokes are capped at the target, and pasted strings are automatically truncated to match the exact requirement for the selected word tier.
+- **Verification:** When verifying outputs with third-party tools (e.g., Ian Coleman), paste the displayed raw hex entropy. This hex reflects the exact byte ordering and rejection-sampling reduction used by the implementation. Re-entering raw dice rolls into tools that assume a different roll-to-byte ordering, a different rejection strategy, or lower roll counts will produce a different entropy value; this is expected and does not indicate an error so long as the entropy hex matches.
 
-- **Verification:** When verifying outputs with third-party tools (e.g., Ian Coleman's BIP-39 tool), paste the displayed raw hex entropy — not the raw dice rolls. Re-entering raw rolls into a tool using a different roll-to-byte convention, or one without a rejection-sampling gate, will produce a different value; compare on the entropy hex, not the roll string.
-
-- **Cryptographic Primitives:** Mnemonic key derivation (by downstream wallet software) uses PBKDF2-HMAC-SHA512 per BIP-39. SHA-256, used here only for the checksum and for a wordlist-integrity self-check, is provided natively by `window.crypto.subtle` with a pure-JS fallback for offline `file://` access. The pure-JS fallback is validated on every page load against published SHA-256 known-answer tests (empty string and `"abc"`), and the full entropy→mnemonic pipeline is validated against four official BIP-39 test vectors before the Generate button is enabled — generation is refused if any self-test fails.
+- **Cryptographic Primitives:** Mnemonic key derivation uses PBKDF2-HMAC-SHA512 per BIP-39 specifications. SHA-256 for wordlist verification is provided natively by `window.crypto.subtle` with a pure-JS fallback for offline `file://` access.
 
 ---
 
@@ -204,17 +187,18 @@ This section summarises the physical and operational assumptions made by the gen
 
 The generator stores the mnemonic and entropy in closure-scoped variables (not window globals) to prevent exposure to browser extensions or injected scripts.
 
-- **Assumptions:** The generator assumes dice are rolled by an honest operator in a physically private environment and that the recording medium (paper or device) is under the operator's control during generation.
+- **Assumptions:** The generator assumes dice are rolled by an honest operator in a physically private environment and that the recording medium (paper or device) is under the operator's control during generation. The document does not assume the operator's environment is free of all risks — instead it documents mitigations for common physical threats.
 
-- **Threats considered:** Shoulder-surfing or covert recording, biased or tampered dice, accidental leakage via networked devices, and operator error when re-entering or transferring entropy/mnemonic data.
+- **Threats considered:** Shoulder-surfing or covert recording, biased or tampered dice, accidental leakage via networked devices, operator error when re-entering or transferring entropy/mnemonic data, and residual secret material left in the clipboard or in the Audit Terminal display after use.
 
 - **Operational recommendations:**
+
   * Roll and record in private; remove cameras, disable microphones, and avoid network-connected devices in the immediate area while generating entropy.
   * Use standard, undamaged dice from a reliable source. If in doubt, perform quick chi-square checks on a sample of rolls or use multiple dice and aggregate results.
-  * If the tool reports a rejection-sampling trigger, clear the entire input and re-roll all dice from scratch. Do not try to "fix" a rejected sequence by editing a few digits — the accept/reject test and the modulo reduction both depend on the full sequence as one integer, so a partial edit does not restore either guarantee.
-  * Prefer an air-gapped computer for converting rolls to entropy, or use paper and an offline reproducible script, to reduce attack surface. If a device is used, verify the binary or HTML artifact's checksums prior to use.
-  * Do not paste raw entropy or the mnemonic into online web pages or networked tools. Transfer only the raw entropy hex using an offline method when cross-verification is required, and verify on an independent, air-gapped machine.
-  * Treat raw entropy hex and the mnemonic as highly sensitive. Avoid copying them to clipboards on networked systems.
+  * Prefer an air-gapped computer for converting rolls to entropy or use paper (and an offline reproducible script) to reduce attack surface. If a device is used, verify the binary or HTML artifact's checksums prior to use.
+  * Do not paste raw entropy or the mnemonic into online web pages or networked tools. When verification against third-party tools is required, transfer only the raw entropy hex using an offline method (QR printed on paper, air-gap USB) and verify on an independent, air-gapped machine.
+  * Treat raw entropy hex and the mnemonic as highly sensitive. The tool attempts to clear the clipboard automatically ~45 seconds after a Copy action, and immediately on "Clear Rolls" or "Hard Reset" — but this is a **best-effort clear, not a guaranteed secure erasure**: no web page can force the OS, other applications, or clipboard-sync services to forget a value once it has been written. Avoid copying to the clipboard on networked systems at all where practical, and clear and destroy intermediate paper records only after secure transfer if required.
+  * The Modulo Bias Audit Terminal hides the sequence-derived values (the roll-derived integer and the modulus arithmetic tied to it) behind an explicit "Show advanced values" toggle, off by default, since those values are computed from the operator's actual dice rolls and leak partial information about the entropy being generated if left visible on screen or captured in a screenshot. Only enable this toggle briefly, for verification, in a private setting.
 
 - **Out of scope:** Supply-chain compromises of cryptographic libraries, OS-level compromise of the recording device, and coercion attacks against the operator.
 
@@ -222,15 +206,13 @@ The generator stores the mnemonic and entropy in closure-scoped variables (not w
 
 ## 9. Common Pitfalls and How to Avoid Them
 
-- **Re-typing dice rolls into other tools:** Always verify by using the displayed raw entropy hex rather than re-typing roll sequences into third-party tools, which may use a different roll-to-byte convention and will not apply the same rejection-sampling gate.
+- **Re-typing dice rolls into other tools:** Always verify by using the displayed raw entropy hex rather than re-typing roll sequences into third-party tools.
 
-- **Byte/bit ordering mismatch:** This project treats the first recorded roll as the most significant base-6 digit and outputs big-endian hex. Other tools may use different conventions. Use the displayed hex when cross-checking.
+- **Byte/bit ordering mismatch:** This project treats the first recorded roll as the most significant base-6 digit and outputs big-endian hex. Other tools may use different conventions, and may not implement rejection sampling at all. Use the displayed hex when cross-checking.
 
-- **Confusing encodings:** Binary mapping (1–3 → 0, 4–6 → 1) used for bit accounting in Section 1 is distinct from the base-6 digit mapping (digit = roll − 1) used for entropy construction. Use the correct mapping for the intended purpose.
+- **Confusing encodings:** Binary mapping (1–3 → 0, 4–6 → 1) used for bit accounting is distinct from base-6 digit mapping (digit = roll − 1). Ensure you use the correct mapping for the intended conversion path.
 
-- **Editing a rejected sequence instead of re-rolling:** After a rejection-sampling trigger, the correct response is to clear all rolls and re-roll the full sequence — see Section 8.
-
-- **Assuming the minimum-entropy roll count is the same as the required roll count:** The information-theoretic minimum for, e.g., 128 bits is $\lceil 128 / \log_2 6 \rceil = 50$ rolls, but the generator requires 55 for the 12-word tier specifically to keep the rejection probability low (Section 5.e). Using only the theoretical minimum with no buffer would make rejection far more frequent and is not what this tool implements.
+- **Insufficient sample size:** Collecting too few rolls produces noisy empirical statistics and may leave you short of required entropy. The UI enforces the current minimums: 55 rolls for 12 words, up to 105 rolls for 24 words (see Section 5c) — the tool will not allow generation below the required count for the selected tier.
 
 - **Exposing the mnemonic:** Never paste the mnemonic into networked web pages. Use local, audited tools for any additional verification.
 
@@ -240,47 +222,73 @@ The generator stores the mnemonic and entropy in closure-scoped variables (not w
 
 For auditors and advanced users, verify the following before using this tool in a threat-sensitive workflow:
 
-- Identify the implementation files for entropy collection and conversion (dice parsing, base-6 → BigInt, the rejection-sampling gate, integer → byte array, checksum, and word slicing). Confirm these are the only code paths used during generation.
-- Confirm the rejection threshold is computed as $T = N - (N \bmod R)$ and that the comparison $X \ge T$ **halts generation** rather than silently falling through to a modulo reduction — this is the security-critical control introduced in this revision.
+- Identify the implementation files for entropy collection and conversion (dice parsing, base-6 → BigInt, rejection-sampling gate, integer → byte array, checksum, and word slicing). Confirm these are the only code paths used during generation.
+
 - Confirm the sources and versions of cryptographic primitives (Web Crypto API, and the name/version of any bundled pure-JS SHA-256 implementation). Prefer native, well-maintained libraries.
-- Specify acceptable runtime environments (e.g., offline browser via `file://`, Node.js in an air-gapped machine) and document any environment caveats.
+
+- Confirm the on-load self-test suite runs and fails closed: the wordlist SHA-256 hash, the four official BIP-39 known-answer vectors, and the rolls→entropy known-answer test should all pass before the Generate button is enabled. Deliberately corrupt one KAT locally and confirm generation is blocked.
+
+- Specify acceptable runtime environments (e.g., offline browser via file://, Node.js in an air-gapped machine) and document any environment caveats.
+
 - Reproducible builds: publish artifact checksums and provide build instructions so auditors can reproduce release artifacts and verify integrity.
 
 Suggested audit checklist:
 
-- Confirm the implementation files for dice → BigInt → rejection gate → hex → mnemonic and list their paths.
-- Confirm SHA-256 implementation(s) and their origins/versions, and confirm the bundled known-answer tests pass.
-- Reproduce both worked examples in Section 11 (accept and reject) in an air-gapped environment using the provided build.
+- Confirm the implementation files for dice → entropy → hex → mnemonic and list their paths.
+- Confirm SHA-256 and PBKDF2 implementations and their origins/versions.
+- Confirm the rejection-sampling boundary ($T = N - (N \bmod R)$) is computed and enforced before any modulo reduction, and that rejection surfaces a visible error rather than silently reducing entropy.
+- Reproduce the worked example in Section 11 in an air-gapped environment using the provided build.
 - Verify there are no network calls, telemetry, or remote loading in the artifact used for generation.
 - Verify release artifact checksums/signatures.
 
 ---
 
-## 11. Worked Examples — 12 words (55 rolls)
+## 11. Worked Example — 12 words (55 rolls)
 
-These examples demonstrate both outcomes of the rejection-sampling gate for the 12-word tier at the current roll count.
+This worked example demonstrates how a 55-roll sequence maps to raw entropy hex and a BIP-39 mnemonic under the current bounded-rejection-sampling implementation. These figures are the tool's own verified Known Answer Test (`ROLLS_KAT`) and reproduce exactly on every page load.
 
-**Shared parameters:** Target 12 words ($E = 128$ bits, 16 bytes), $k = 55$ rolls, $N = 6^{55}$, $R = 2^{128}$, $r = N \bmod R = \texttt{0x8756d0073182ef9be580000000000000}$, $T = N - r = \texttt{0x482600000000000000000000000000000000}$.
+### Example Parameters
 
-### 11.a Accept Path
+- **Target Mnemonic:** 12 words ($b = 128$ bits, 16 bytes)
+- **Roll Sequence:** 55 rolls (`4, 3` followed by 53 rolls of `1`)
 
-- **Roll sequence:** `4, 3` followed by 53 rolls of `1` (55 rolls total).
-- **Digits** (roll − 1): `[3, 2, 0, 0, …, 0]`.
-- **Base-6 BigInt:** $X = \texttt{0x281567a201cb1b81a18f7f80000000000000}$.
-- **Gate check:** $X < T$ → **accept**.
-- **Reduction:** $X \bmod 2^{128} = \texttt{0x67a201cb1b81a18f7f80000000000000}$.
-- **Raw Entropy Hex:** `67a201cb1b81a18f7f80000000000000`
-- **Checksum:** first 4 bits of $\text{SHA-256}(\text{entropy bytes})$, appended to form the 132-bit bitstream, split into twelve 11-bit chunks.
-- **Generated Mnemonic:** `guilt avoid index damage borrow sibling wrap abandon abandon abandon abandon able`
+### Step-by-Step Conversion
 
-### 11.b Reject Path
+1. **Map Rolls to Base-6 Digits ($\text{digit} = \text{roll} - 1$):**
 
-- **Roll sequence:** `6` repeated 55 times — the maximum possible roll sequence.
-- **Digits:** `[5, 5, …, 5]`, giving $X = N - 1 = \texttt{0x48268756d0073182ef9be57fffffffffffff}$.
-- **Gate check:** $X \ge T$ → **reject**. This sequence falls in the top $r$ outcomes ($\approx 1$ in 34,938 sequences at this tier — see Section 5.e) that cannot be mapped evenly across the 128-bit target space.
-- **Result:** generation halts. No entropy, hex, or mnemonic is produced. The operator is instructed to clear all rolls and re-roll from scratch.
+   - First two rolls (`4, 3`): digits `[3, 2]`
+   - Remaining 53 rolls (`1`): digits `[0, 0, ..., 0]`
 
-Both examples can be reproduced independently: build the BigInt from the digit sequence, compare against $T$, and — for the accept case — reduce mod $2^{128}$, hash with SHA-256, and slice into 11-bit BIP-39 word indices.
+2. **Calculate the Base-6 BigInt ($X$) and the Rejection Boundary:**
+
+   $$N = 6^{55} = 6{,}285{,}195{,}213{,}566{,}005{,}335{,}561{,}053{,}533{,}150{,}026{,}217{,}291{,}776$$
+   $$R = 2^{128} = 340{,}282{,}366{,}920{,}938{,}463{,}463{,}374{,}607{,}431{,}768{,}211{,}456$$
+   $$r = N \bmod R = 179{,}896{,}536{,}271{,}915{,}392{,}524{,}533{,}885{,}267{,}351{,}699{,}456$$
+   $$T = N - r = 6{,}285{,}015{,}317{,}029{,}733{,}420{,}168{,}528{,}999{,}264{,}758{,}865{,}592{,}320$$
+   $$X = 3{,}491{,}775{,}118{,}647{,}780{,}741{,}978{,}363{,}073{,}972{,}236{,}787{,}384{,}320$$
+
+3. **Check the Rejection Condition:**
+
+   $$X < T \implies \textbf{ACCEPT}$$
+
+4. **Reduce via Modulo:**
+
+   $$X \bmod R = 137{,}751{,}672{,}031{,}168{,}380{,}676{,}227{,}114{,}863{,}169{,}634{,}304$$
+
+   **Raw Entropy Hex:** `67a201cb1b81a18f7f80000000000000`
+
+5. **Checksum & Word Index Generation:**
+
+   - Compute $\text{SHA-256}(\text{Raw Entropy})$ to extract the 4-bit checksum.
+   - Append checksum to raw entropy to form the 132-bit bitstream $S$.
+   - Split $S$ into 11-bit MSB-first chunks to map to BIP-39 English wordlist indices.
+
+6. **Verification Output:**
+
+   - **Raw Entropy Hex:** `67a201cb1b81a18f7f80000000000000`
+   - **Generated Mnemonic:** `guilt avoid index damage borrow sibling wrap abandon abandon abandon abandon able`
+
+This exact roll sequence, hex output, and mnemonic are checked automatically as part of the on-load self-test suite (Section 10) — if you reproduce a different result, the implementation you are auditing has diverged from this specification.
 
 ---
 
@@ -289,5 +297,3 @@ Both examples can be reproduced independently: build the BigInt from the digit s
 - BIP-39: <https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki>
 - Ian Coleman BIP39 tool: <https://iancoleman.io/bip39/>
 - SHA-256, PBKDF2 specifications (NIST and RFC references)
-
- 
