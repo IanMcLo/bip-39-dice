@@ -47,7 +47,8 @@ BIP-39 requires raw entropy lengths E that are multiples of 32 bits. Standard ch
 
 Compute the SHA-256 digest over the raw entropy byte array as produced by the implementation (see Implementation notes on byte ordering):
 
-$$\text{Digest} = \text{SHA-256}(\text{RawEntropy\_bytes})$$
+`Digest = SHA-256(RawEntropy_bytes)`
+
 
 Take the first $CS$ bits of the Digest as the checksum bits (that is, the most significant bits of the digest stream):
 
