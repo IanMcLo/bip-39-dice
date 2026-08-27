@@ -168,7 +168,45 @@ Combined with Section 5's rejection gate, this reduction is exact rather than ap
 
 ---
 
-## 7. Implementation & Interoperability Notes
+## 7. Live Statistical Diagnostics: Chi-Squared and Autocorrelation Checks
+
+Sections 5–6 establish that the entropy math is exactly uniform regardless of the physical dice used, provided each roll is truly independent and fair. The checks in this section address the separate question of whether that precondition actually holds for a given set of dice — they are diagnostics **about the operator's physical dice**, not about the entropy conversion, and they have no influence whatsoever on the accept/reject decision in Section 5b. A flagged result is a prompt to inspect your dice; it is not, and cannot be, a security failure of the tool.
+
+Both checks live in the Modulo Bias Audit Terminal, behind the same "Show advanced values" toggle described in Section 9, and update live on every valid keystroke once the roll count reaches the minimum sample size below.
+
+### a. Chi-Squared Goodness-of-Fit Test
+
+For $n$ rolls, let $O_i$ be the observed count of face $i \in \{1,\dots,6\}$ and $E = n/6$ the expected count under a fair die. The test statistic is:
+
+$$\chi^2 = \sum_{i=1}^{6} \frac{(O_i - E)^2}{E}$$
+
+This is compared against the critical value for $\text{df} = 6 - 1 = 5$ at $\alpha = 0.05$: $\chi^2_{\text{crit}} = 11.070$. $\chi^2 > \chi^2_{\text{crit}}$ is shown as ⚠️; otherwise ✔️.
+
+**Minimum sample size:** the chi-squared approximation is only valid when each bin's expected count is $\ge 5$, i.e. $n/6 \ge 5 \Rightarrow n \ge 30$. Below 30 rolls the terminal reports that insufficient data has been collected rather than showing a result, since a tick or cross below that threshold would carry no real statistical meaning.
+
+### b. Lag-1 Autocorrelation Test
+
+The chi-squared test above checks only the marginal distribution of face values — it cannot detect a die (or an operator's recording habit) that produces faces in a non-independent order, e.g. a face that systematically tends to follow another. A conventional way to test for that is a pairwise chi-squared test over all 36 ordered pairs of consecutive rolls, but that test requires each of its 36 bins to have an expected count $\ge 5$, i.e. $n \ge 180$ rolls — more than every tier in Section 5c collects, which would make such a test meaningfully underpowered at every roll count this tool uses.
+
+Instead, the terminal computes the lag-1 autocorrelation coefficient directly, which does not require binning and stays valid at these sample sizes. For rolls $v_1, \dots, v_n$ with mean $\bar{v}$:
+
+$$r = \frac{\sum_{i=1}^{n-1} (v_i - \bar{v})(v_{i+1} - \bar{v})}{\sum_{i=1}^{n} (v_i - \bar{v})^2}$$
+
+Significance is assessed via the Fisher $z$-transform, using $n-1$ pairs:
+
+$$z = \tanh^{-1}(r) \cdot \sqrt{(n-1) - 3}$$
+
+$|z| > 1.96$ (the two-tailed $\alpha = 0.05$ critical value under the asymptotic normal approximation) is shown as ⚠️; otherwise ✔️. This shares the same $n \ge 30$ minimum as the chi-squared test above.
+
+### c. Scope and Limitations
+
+- Both checks are advisory only. They are computed from — and therefore, like the raw sequence-derived values in Section 9, partially reveal — the operator's actual roll values, which is why both are gated behind the same opt-in "Show advanced values" toggle rather than shown by default.
+- The lag-1 test detects correlation between *adjacent* rolls only. A pattern correlated at lag 2 or higher (e.g. roll $i$ predicting roll $i{+}2$ but not $i{+}1$) would not be caught by either check. Extending to higher lags is possible in principle but trades dashboard clarity for diminishing statistical power at these sample sizes, and is not currently implemented.
+- Neither check can distinguish a biased physical die from an operator who is not rolling independently (e.g. unconsciously favoring certain sequences when transcribing by hand) — both produce the same statistical signature. Either way, the correct response to a flagged result is the same: inspect the physical process, not the software.
+
+---
+
+## 8. Implementation & Interoperability Notes
 
 - **Byte/bit ordering:** The implementation treats the first recorded die roll as the most significant base-6 digit (MSB-first). The accumulated base-6 integer is reduced via bounded rejection sampling (Section 5) and the accepted result is converted to a big-endian hex string, zero-padded to the target byte length.
 
@@ -184,7 +222,7 @@ Combined with Section 5's rejection gate, this reduction is exact rather than ap
 
 ---
 
-## 8. Threat Model & Operational Security
+## 9. Threat Model & Operational Security
 
 This section summarises the physical and operational assumptions made by the generator and gives concise guidance for safe use.
 
@@ -197,17 +235,17 @@ The generator stores the mnemonic and entropy in closure-scoped variables (not w
 - **Operational recommendations:**
 
   * Roll and record in private; remove cameras, disable microphones, and avoid network-connected devices in the immediate area while generating entropy.
-  * Use standard, undamaged dice from a reliable source. If in doubt, perform quick chi-square checks on a sample of rolls or use multiple dice and aggregate results.
+  * Use standard, undamaged dice from a reliable source. The tool automates a chi-squared bias check and a lag-1 autocorrelation check once 30+ rolls are entered (Section 7) — treat a flagged result as a prompt to inspect your physical dice, or use multiple dice and aggregate results.
   * Prefer an air-gapped computer for converting rolls to entropy or use paper (and an offline reproducible script) to reduce attack surface. If a device is used, verify the binary or HTML artifact's checksums prior to use.
   * Do not paste raw entropy or the mnemonic into online web pages or networked tools. When verification against third-party tools is required, transfer only the raw entropy hex using an offline method (QR printed on paper, air-gap USB) and verify on an independent, air-gapped machine.
   * Treat raw entropy hex and the mnemonic as highly sensitive. The tool attempts to clear the clipboard automatically ~45 seconds after a Copy action, and immediately on "Clear Rolls" or "Hard Reset" — but this is a **best-effort clear, not a guaranteed secure erasure**: no web page can force the OS, other applications, or clipboard-sync services to forget a value once it has been written. Avoid copying to the clipboard on networked systems at all where practical, and clear and destroy intermediate paper records only after secure transfer if required.
-  * The Modulo Bias Audit Terminal hides the sequence-derived values (the roll-derived integer and the modulus arithmetic tied to it) behind an explicit "Show advanced values" toggle, off by default, since those values are computed from the operator's actual dice rolls and leak partial information about the entropy being generated if left visible on screen or captured in a screenshot. Only enable this toggle briefly, for verification, in a private setting.
+  * The Modulo Bias Audit Terminal hides the sequence-derived values (the roll-derived integer, the modulus arithmetic tied to it, and the face counts/correlation coefficient behind the Section 7 diagnostics) behind an explicit "Show advanced values" toggle, off by default, since those values are computed from the operator's actual dice rolls and leak partial information about the entropy being generated if left visible on screen or captured in a screenshot. Only enable this toggle briefly, for verification, in a private setting.
 
 - **Out of scope:** Supply-chain compromises of cryptographic libraries, OS-level compromise of the recording device, and coercion attacks against the operator.
 
 ---
 
-## 9. Common Pitfalls and How to Avoid Them
+## 10. Common Pitfalls and How to Avoid Them
 
 - **Re-typing dice rolls into other tools:** Always verify by using the displayed raw entropy hex rather than re-typing roll sequences into third-party tools.
 
@@ -221,7 +259,7 @@ The generator stores the mnemonic and entropy in closure-scoped variables (not w
 
 ---
 
-## 10. Trusted Code Base & Audit Checklist
+## 11. Trusted Code Base & Audit Checklist
 
 For auditors and advanced users, verify the following before using this tool in a threat-sensitive workflow:
 
@@ -240,13 +278,14 @@ Suggested audit checklist:
 - Confirm the implementation files for dice → entropy → hex → mnemonic and list their paths.
 - Confirm SHA-256 and PBKDF2 implementations and their origins/versions.
 - Confirm the rejection-sampling boundary ($T = N - (N \bmod R)$) is computed and enforced before any modulo reduction, and that rejection surfaces a visible error rather than silently reducing entropy.
-- Reproduce the worked example in Section 11 in an air-gapped environment using the provided build.
+- Confirm the Section 7 chi-squared and autocorrelation diagnostics are read-only: verify neither their computed statistics nor their pass/fail state feed back into the accept/reject decision at any code path.
+- Reproduce the worked example in Section 12 in an air-gapped environment using the provided build.
 - Verify there are no network calls, telemetry, or remote loading in the artifact used for generation.
 - Verify release artifact checksums/signatures.
 
 ---
 
-## 11. Worked Example — 12 words (55 rolls)
+## 12. Worked Example — 12 words (55 rolls)
 
 This worked example demonstrates how a 55-roll sequence maps to raw entropy hex and a BIP-39 mnemonic under the current bounded-rejection-sampling implementation. These figures are the tool's own verified Known Answer Test (`ROLLS_KAT`) and reproduce exactly on every page load.
 
@@ -291,7 +330,7 @@ This worked example demonstrates how a 55-roll sequence maps to raw entropy hex 
    - **Raw Entropy Hex:** `67a201cb1b81a18f7f80000000000000`
    - **Generated Mnemonic:** `guilt avoid index damage borrow sibling wrap abandon abandon abandon abandon able`
 
-This exact roll sequence, hex output, and mnemonic are checked automatically as part of the on-load self-test suite (Section 10) — if you reproduce a different result, the implementation you are auditing has diverged from this specification.
+This exact roll sequence, hex output, and mnemonic are checked automatically as part of the on-load self-test suite (Section 11) — if you reproduce a different result, the implementation you are auditing has diverged from this specification.
 
 ---
 
