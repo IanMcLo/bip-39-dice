@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.1.6
+
+### Added
+
+- **Chi-Squared Die-Bias Check (Audit Terminal, Advanced):** With the Audit Terminal's "Advanced" toggle enabled, a live chi-squared goodness-of-fit test (df=5, α=0.05, critical value 11.070) now runs against the six observed die-face counts, updating on every valid keystroke. Below 30 rolls it reports "need more rolls" rather than a misleading tick/cross — 30 is the minimum needed for each face's expected count (n/6) to clear the ≥5 threshold the chi-squared approximation requires.
+- **Lag-1 Autocorrelation Check (Audit Terminal, Advanced):** A second, independent test flags sequential correlation between consecutive rolls (e.g. one face systematically following another) using a Fisher z-transform (two-tailed, α=0.05, |z| > 1.96). A full pairwise (36-bin) chi-squared test would need n ≥ 180 to be statistically valid — more rolls than any tier collects — so this test avoids binning entirely to stay valid at current roll counts. Shares the same 30-roll minimum as the chi-squared check.
+
+Both checks are diagnostics about the **physical dice**, not the entropy math, and are **informational only** — they surface a ✔️/⚠️ line with supporting stats, but never affect the accept/reject verdict, which remains governed solely by the exact rejection-sampling gate (`X < T`). Consistent with the existing safe-by-default design of the Audit Terminal, both are gated behind the "Advanced" toggle alongside the raw N/r/T/X figures, since face counts and the autocorrelation coefficient are derived from the actual roll values rather than being privacy-safe aggregate statistics like the default P(reject)/verdict lines.
+
+### Verification
+
+- Simulated fair, deliberately-biased, and deliberately-correlated die sequences to confirm both tests separate cleanly at their stated thresholds; ran 2,000 fair-roll trials to confirm the autocorrelation test's false-positive rate lands near its nominal 5% (observed 4.25%).
+- Confirmed brace/paren balance across both `<script>` blocks after the change.
+- Confirmed no naming collisions with existing audit-terminal variables (`r` is reused for the rejection-sampling remainder and the correlation coefficient in adjacent scopes; the latter is destructured under an alias to avoid shadowing).
+
+*Release File Hash: `944818f7c6a6994342e635226e713ede7f3b9ab08c437805d14ab05991661257`*
+
+
 ## v1.1.5
 
 ### Input Validation and UX
