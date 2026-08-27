@@ -886,6 +886,49 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // Chi-squared goodness-of-fit test for die-face uniformity, and a lag-1
+  // autocorrelation test for sequential patterns. Both are diagnostics
+  // about the *physical dice*, not the entropy math — they never affect
+  // accept/reject, which remains governed solely by X < T above. Both
+  // are gated behind the "Advanced" toggle, consistent with this file's
+  // safe-by-default philosophy: face counts and the autocorrelation
+  // coefficient are derived from the actual roll values, so — like the
+  // raw N/r/T/X figures already gated above — they stay hidden by
+  // default and are shown only when the user opts in.
+  const CHI2_CRITICAL_DF5 = 11.070; // alpha=0.05, df=5 (6 faces - 1), one-sided upper-tail test
+  const AUTOCORR_Z_CRITICAL = 1.96; // alpha=0.05, two-tailed, asymptotic normal approx (Fisher z)
+  const BIAS_TEST_MIN_ROLLS = 30;   // rule of thumb: expected count per bin (n/6) should be >= 5
+
+  function chiSquareTest(cleanRolls) {
+    const counts = [0, 0, 0, 0, 0, 0];
+    for (const c of cleanRolls) counts[Number(c) - 1]++;
+    const n = cleanRolls.length;
+    const expected = n / 6;
+    let chi2 = 0;
+    for (let i = 0; i < 6; i++) chi2 += Math.pow(counts[i] - expected, 2) / expected;
+    return { counts, chi2 };
+  }
+
+  // A full pairwise (36-bin) chi-squared test would need n>=180 for
+  // validity, which exceeds every tier's roll count, so it would be
+  // meaninglessly underpowered here. The Fisher-z approach on lag-1
+  // autocorrelation avoids binning entirely and stays valid at these
+  // sample sizes.
+  function lag1AutocorrTest(cleanRolls) {
+    const vals = [...cleanRolls].map(Number);
+    const n = vals.length;
+    const mean = vals.reduce((a, b) => a + b, 0) / n;
+    let denom = 0;
+    for (const v of vals) denom += (v - mean) ** 2;
+    let num = 0;
+    for (let i = 0; i < n - 1; i++) num += (vals[i] - mean) * (vals[i + 1] - mean);
+    let r = denom > 0 ? num / denom : 0;
+    r = Math.max(-0.999999, Math.min(0.999999, r)); // guard atanh domain
+    const pairs = n - 1;
+    const z = 0.5 * Math.log((1 + r) / (1 - r)) * Math.sqrt(Math.max(pairs - 3, 1));
+    return { r, z, pairs };
+  }
+
   function updateAudit() {
     const out = document.getElementById('auditOut');
     if (!out) return;
@@ -927,6 +970,24 @@ document.addEventListener('DOMContentLoaded', function() {
                `N=${N.toString(16).slice(0, 8)}… (${N.toString(2).length}b)`,
                `r=${r.toString(16).slice(0, 8)}… T=${T.toString(16).slice(0, 8)}…`,
                `X=${X.toString(16).slice(0, 8)}…`);
+
+        if (k >= BIAS_TEST_MIN_ROLLS) {
+          const { chi2, counts } = chiSquareTest(clean);
+          const biased = chi2 > CHI2_CRITICAL_DF5;
+          L.push(`χ²(df=5)=${chi2.toFixed(2)} faces[1-6]=${counts.join(',')}`,
+                 biased
+                   ? `⚠️ χ² > ${CHI2_CRITICAL_DF5} — possible die bias (informational, does not block generation)`
+                   : `✔️ χ² ≤ ${CHI2_CRITICAL_DF5} — no bias detected`);
+
+          const { r: corrR, z, pairs } = lag1AutocorrTest(clean);
+          const correlated = Math.abs(z) > AUTOCORR_Z_CRITICAL;
+          L.push(`lag-1 autocorr r=${corrR.toFixed(3)} z=${z.toFixed(2)} (n=${pairs} pairs)`,
+                 correlated
+                   ? `⚠️ |z| > ${AUTOCORR_Z_CRITICAL} — possible sequential correlation (informational, does not block generation)`
+                   : `✔️ |z| ≤ ${AUTOCORR_Z_CRITICAL} — no sequential correlation detected`);
+        } else {
+          L.push(`Bias checks: need ≥${BIAS_TEST_MIN_ROLLS} rolls for a valid test (have ${k})`);
+        }
       }
     }
     out.textContent = L.join('\n');
