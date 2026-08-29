@@ -4,6 +4,9 @@ A single-file, offline, cryptographically auditable BIP-39 seed phrase generator
 
 Built for security purists: this tool uses **exact rejection sampling** to reduce modulo bias to mathematically **zero**, features on-load Known Answer Tests (KATs) that fail-closed, and includes a live Modulo Bias Audit Terminal — now with statistical die-fairness checks — so you can verify the math yourself.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![HTML 100%](https://img.shields.io/badge/HTML-100%25-orange)]()
+
 ## 🛡️ Security & Features
 
 - **Zero Modulo Bias (Rejection Sampling):** Instead of bounding the bias, v1.1.4 eliminates it. The base-6 roll integer is mapped to the target $2^b$ space. If the integer falls into the remainder zone ($X \ge T$), the tool refuses to generate and asks you to re-roll.
