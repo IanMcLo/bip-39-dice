@@ -11,6 +11,7 @@ Built for security purists: this tool uses **exact rejection sampling** to reduc
 
 - **Zero Modulo Bias (Rejection Sampling):** Instead of bounding the bias, v1.1.4 eliminates it. The base-6 roll integer is mapped to the target $2^b$ space. If the integer falls into the remainder zone ($X \ge T$), the tool refuses to generate and asks you to re-roll.
 - **Live Modulo Bias Audit Terminal:** A floating action button (🔬) opens a live audit sheet showing the exact BigInt math (N, R, r, T, X) and the live verdict (✅ ACCEPT or ⛔ REJECT) on every keystroke.
+- ![](photos/Screenshots-audit.jpg)
 - **Live Die-Fairness Checks (v1.1.6, Advanced):** With the Audit Terminal's "Advanced" toggle enabled, it also runs a chi-squared goodness-of-fit test on the six observed face counts and a lag-1 autocorrelation test for sequential patterns, each showing ✔️ or ⚠️ once at least 30 rolls have been entered. These are diagnostics about the physical dice, not the entropy math — **informational only**, gated behind Advanced like the rest of the raw math, and the accept/reject decision is unaffected either way.
 - **On-Load Self-Tests (Fail-Closed):** Every page load verifies the SHA-256 implementation, the official BIP-39 wordlist hash, the roll-to-entropy packing, and 4 official BIP-39 test vectors. If any test fails, the Generate button is disabled.
 - **Enhanced Entropy Buffers:** Minimum roll requirements have been increased by +1 across all tiers to maximize the cryptographic safety margin:
