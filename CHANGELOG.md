@@ -18,6 +18,7 @@ Pasting into the verify field now attempts to scrub the OS clipboard shortly aft
 Long entropy hex string in the verify result no longer overflows off-screen (word-break/overflow-wrap added).
 Verify button now fails closed if the wordlist/self-test integrity check hasn't passed, matching the existing behavior of the Generate button.
 Removed a stray checked attribute on the clipboard toggle checkbox that contradicted its actual (off-by-default) runtime state.
+*Release File Hash: 0922903d94afe5de0d4816771d490bb70b3acc6444664cf237824f3789180a37*
 
 ## v1.1.6
 
