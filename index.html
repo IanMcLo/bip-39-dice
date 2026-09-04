@@ -33,7 +33,8 @@
       font-weight: bold;
       color: #d4d4d4;
     }
-    input[type="text"] {
+    input[type="text"],
+    input[type="password"] {
       width: 100%;
       padding: 12px;
       border: 1px solid #333;
@@ -237,7 +238,20 @@
   <div id="wordlistStatus" class="wordlist-status">⏳ Checking wordlist...</div>
 
 </div>
-
+<div class="container">
+  <h2 style="color:#f0a500; margin-top:0;">✅ Verify Mnemonic</h2>
+  <p><small>Treated as secret input: this field auto-clears like your generated phrase, and if you paste from your clipboard we attempt to scrub the clipboard shortly after.</small></p>
+  <label for="verifyInput">Paste your recovery phrase:</label>
+  <div class="row" style="margin-top:5px;">
+    <input type="password" id="verifyInput" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off" placeholder="abandon ability able ..." style="flex:1; min-width:200px;">
+    <button type="button" id="toggleVerifyVisibility" class="secondary" style="padding:12px 16px;">👁 Show</button>
+  </div>
+  <div class="flex" style="margin-top:10px;">
+    <button id="verifyBtn">🔍 Verify Mnemonic</button>
+    <button id="clearVerifyBtn" class="secondary">✖ Clear</button>
+  </div>
+ <div id="verifyStatus" class="wordlist-status" style="display:none; margin-top:15px; word-break:break-all; overflow-wrap:anywhere;"></div>
+</div>
 <div class="container" id="resultsContainer" style="display:none;">
   <h2 style="color:#f0a500; margin-top:0;">Recovery Phrase</h2>
   <div id="mnemonicOutput" class="output-area">
@@ -271,7 +285,7 @@
   <!-- CLIPBOARD TOGGLE -->
   <div class="clipboard-toggle">
     <label>
-      <input type="checkbox" id="enableClipboardToggle" checked>
+      <input type="checkbox" id="enableClipboardToggle">
       Enable clipboard copy buttons (disabled by default for maximum security)
     </label>
   </div>
@@ -608,6 +622,29 @@ const WORDLIST_CHECK = (async function verifyWordlist() {
       }
     } catch (e) { pass = false; msg += 'BIP-39 KAT error: ' + e.message + '. '; }
   }
+
+  // ---- Self-test: mnemonic verifier ----
+  try {
+    const good = await verifyMnemonic(
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+    );
+    if (!good.valid || good.entropyHex !== '00000000000000000000000000000000') {
+      pass = false;
+      msg += 'Mnemonic verifier valid-vector KAT failed. ';
+    }
+
+    const bad = await verifyMnemonic(
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon'
+    );
+    if (bad.valid) {
+      pass = false;
+      msg += 'Mnemonic verifier rejected-checksum KAT failed. ';
+    }
+  } catch (e) {
+    pass = false;
+    msg += 'Mnemonic verifier KAT error: ' + e.message + '. ';
+  }
+
   const box = document.getElementById('wordlistStatus');
   box.classList.remove('pass', 'fail');
   box.classList.add(pass ? 'pass' : 'fail');
@@ -747,7 +784,38 @@ function entropyToMnemonic(entropyHex) {
     }).catch(reject);
   });
 }
+async function verifyMnemonic(phrase) {
+  const words = phrase.trim().toLowerCase().split(/\s+/);
+  if (![12, 15, 18, 21, 24].includes(words.length)) {
+    return { error: `Invalid word count: ${words.length}. Must be 12, 15, 18, 21, or 24.` };
+  }
 
+  let bits = '';
+  for (const w of words) {
+    const idx = WORDLIST.indexOf(w);
+    if (idx === -1) return { error: `"${w}" is not in the wordlist.` };
+    bits += idx.toString(2).padStart(11, '0');
+  }
+
+  // Total bits = ENT + CS, where CS = ENT/32, so CS = total/33
+  const csBits = bits.length / 33;
+  const entropyBits = bits.slice(0, bits.length - csBits);
+  const checksumBits = bits.slice(bits.length - csBits);
+
+  const entropyBytes = new Uint8Array(entropyBits.length / 8);
+  for (let i = 0; i < entropyBytes.length; i++) {
+    entropyBytes[i] = parseInt(entropyBits.substr(i * 8, 8), 2);
+  }
+
+  const hash = await sha256(entropyBytes);
+  const hashBits = Array.from(new Uint8Array(hash))
+    .map(b => b.toString(2).padStart(8, '0')).join('');
+
+  return {
+    valid: hashBits.slice(0, csBits) === checksumBits,
+    entropyHex: Array.from(entropyBytes).map(b => b.toString(16).padStart(2, '0')).join('')
+  };
+}
 /**
  * Convert dice rolls to entropy hex using bounded rejection sampling.
  * Eliminates modulo bias completely by enforcing a mathematical cutoff threshold (T).
@@ -827,7 +895,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const wordCountSelect = document.getElementById('wordCount');
   const rollCounter = document.getElementById('rollCounter');
   const enableClipboardToggle = document.getElementById('enableClipboardToggle');
-
+const verifyInput = document.getElementById('verifyInput');
+const verifyBtn = document.getElementById('verifyBtn');
+const verifyStatus = document.getElementById('verifyStatus');
+const clearVerifyBtn = document.getElementById('clearVerifyBtn');
+const toggleVerifyVisibility = document.getElementById('toggleVerifyVisibility');
+let verifyBurnTimer = null;
   // Tracks whether the wordlist/BIP-39 self-test suite passed, so the
   // invalid-character handler below never accidentally re-enables a
   // Generate button that WORDLIST_CHECK has permanently disabled.
@@ -1022,24 +1095,46 @@ document.addEventListener('DOMContentLoaded', function() {
       updateAudit();
     }, BURN_AFTER_READING_SECONDS * 1000);
   }
+// NON-PERSISTENCE HARDENING: same burn-after-reading treatment for
+// a pasted-in mnemonic being verified, since it's just as much a
+// live secret as a generated one.
+function scheduleVerifyBurn() {
+  if (verifyBurnTimer) clearTimeout(verifyBurnTimer);
+  verifyBurnTimer = setTimeout(clearVerifyOnly, BURN_AFTER_READING_SECONDS * 1000);
+}
 
-  // NON-PERSISTENCE HARDENING: Clear all secrets from screen and memory
-  function clearAllSecrets() {
-    diceInput.value = '';
-    diceInput.classList.remove('invalid');
-    generateBtn.disabled = !wordlistOk;
-    mnemonicText.textContent = '';
-    entropyText.textContent = '';
-    resultsContainer.style.display = 'none';
-    currentMnemonic = [];
-    currentEntropy = '';
-    if (burnTimer) {
-      clearTimeout(burnTimer);
-      burnTimer = null;
-    }
-    updateCounter();
-    updateAudit();
+// Clears only the verify section (pasted phrase + result), leaving
+// dice rolls and any generated mnemonic untouched. Used by the
+// verify section's own Clear button and by the burn timer above.
+function clearVerifyOnly() {
+  verifyInput.value = '';
+  verifyStatus.style.display = 'none';
+  verifyStatus.textContent = '';
+  verifyStatus.classList.remove('pass', 'fail');
+  if (verifyBurnTimer) {
+    clearTimeout(verifyBurnTimer);
+    verifyBurnTimer = null;
   }
+}
+
+ function clearAllSecrets() {
+  diceInput.value = '';
+  diceInput.classList.remove('invalid');
+  generateBtn.disabled = !wordlistOk;
+  mnemonicText.textContent = '';
+  entropyText.textContent = '';
+  resultsContainer.style.display = 'none';
+  currentMnemonic = [];
+  currentEntropy = '';
+  if (burnTimer) {
+    clearTimeout(burnTimer);
+    burnTimer = null;
+  }
+  // Verify field gets the same treatment
+  clearVerifyOnly();
+  updateCounter();
+  updateAudit();
+}
 
   // 1. Lock typing when exact required roll count is reached
   diceInput.addEventListener('keydown', function(e) {
@@ -1166,7 +1261,80 @@ document.addEventListener('DOMContentLoaded', function() {
     clearAllSecrets();
     await attemptClearClipboard();
   });
+verifyInput.addEventListener('input', function() {
+  if (verifyInput.value) {
+    scheduleVerifyBurn();
+  } else if (verifyBurnTimer) {
+    clearTimeout(verifyBurnTimer);
+    verifyBurnTimer = null;
+  }
+});
 
+// Mirrors the copy-to-clipboard auto-clear philosophy, but for the
+// reverse direction: if the user pasted from their clipboard (e.g. a
+// password manager), scrub the clipboard shortly after — only if it
+// still holds exactly what was pasted, so we never clobber unrelated
+// content.
+verifyInput.addEventListener('paste', function(e) {
+  const pasted = (e.clipboardData || window.clipboardData).getData('text');
+  if (!pasted) return;
+  setTimeout(async function() {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const current = await navigator.clipboard.readText();
+        if (current === pasted) {
+          await writeClipboard('');
+        }
+      }
+    } catch (err) {
+      // No clipboard read permission — skip silently, same as elsewhere.
+    }
+  }, 500);
+});
+
+toggleVerifyVisibility.addEventListener('click', function() {
+  const showing = verifyInput.type === 'text';
+  verifyInput.type = showing ? 'password' : 'text';
+  toggleVerifyVisibility.textContent = showing ? '👁 Show' : '🙈 Hide';
+});
+
+clearVerifyBtn.addEventListener('click', function() {
+  clearVerifyOnly();
+});
+
+verifyBtn.addEventListener('click', async function() {
+  if (!(await WORDLIST_CHECK)) {
+    alert('⛔ Wordlist integrity check failed. Refusing to verify mnemonic.');
+    return;
+  }
+
+  const raw = verifyInput.value;
+  if (!raw.trim()) {
+    alert('Please paste a recovery phrase first.');
+    return;
+  }
+  verifyStatus.style.display = 'block';
+  verifyStatus.classList.remove('pass', 'fail');
+  verifyStatus.textContent = '⏳ Checking...';
+  const result = await verifyMnemonic(raw);
+  if (result.error) {
+    verifyStatus.classList.add('fail');
+    verifyStatus.textContent = '❌ ' + result.error;
+  } else if (result.valid) {
+    verifyStatus.classList.add('pass');
+    let msg = '✅ Valid BIP-39 checksum.';
+    if (currentEntropy) {
+      msg += result.entropyHex === currentEntropy
+        ? ' Matches the seed generated in this session.'
+        : ' Does NOT match the seed generated in this session.';
+    }
+    verifyStatus.textContent = msg;
+  } else {
+    verifyStatus.classList.add('fail');
+    verifyStatus.textContent = '❌ Invalid checksum — check for a mistyped or out-of-order word.';
+  }
+  scheduleVerifyBurn();
+});
   // NON-PERSISTENCE HARDENING: Panic hotkey - double-tap Escape
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
@@ -1183,6 +1351,13 @@ document.addEventListener('DOMContentLoaded', function() {
   // NON-PERSISTENCE HARDENING: Clear on tab close/navigation
   window.addEventListener('beforeunload', function() {
     try {
+        verifyInput.value = '';
+verifyStatus.style.display = 'none';
+verifyStatus.textContent = '';
+if (verifyBurnTimer) {
+  clearTimeout(verifyBurnTimer);
+  verifyBurnTimer = null;
+}
       mnemonicText.textContent = '';
       entropyText.textContent = '';
       diceInput.value = '';
@@ -1390,7 +1565,7 @@ document.addEventListener('DOMContentLoaded', function() {
   "use strict";
 
   window.hardReset = function() {
-    const inputs = document.querySelectorAll('input[type="text"], input[type="number"], textarea');
+ const inputs = document.querySelectorAll('input[type="text"], input[type="password"], input[type="number"], textarea');
     inputs.forEach(function(el) {
       el.value = '';
       el.dispatchEvent(new Event('input', { bubbles: true }));
