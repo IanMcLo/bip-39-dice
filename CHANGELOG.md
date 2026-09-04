@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.1.7
+
+### Added
+
+- **Mnemonic verification feature** paste an existing recovery phrase to check its BIP-39 checksum, reusing the existing WORDLIST and sha256() implementation (word → index → bits → entropy/checksum split → SHA-256 compare).
+"Verify Mnemonic" UI section: masked input field with show/hide toggle, Verify button, and dedicated Clear button.
+Known-answer test for the verifier added to the on-load self-test suite (official all-zero-entropy vector + its checksum-broken counterpart), so verification correctness is now part of the same integrity gate as wordlist and generation checks.
+Changed:
+- **Verify result no longer displays raw entropy hex by default** — shows "✅ Valid BIP-39 checksum" plus, when a mnemonic was generated earlier in the session, whether the pasted phrase matches or doesn't match that seed. Reduces the number of full secret representations left on screen.
+- **Verify section's Clear button now clears only the pasted phrase and result** not the dice rolls or generated mnemonic (previously shared the same "wipe everything" handler).
+input[type="password"] now styled identically to input[type="text"] for visual consistency.
+Fixed
+- **Verify field is now covered by the same non-persistence hardening as the generator** burn-after-reading auto-clear, the panic double-Escape hotkey, Hard Reset, and beforeunload cleanup.
+- **Hard Reset's input sweep now also matches input[type="password"]**, so it can no longer skip the verify field.
+Pasting into the verify field now attempts to scrub the OS clipboard shortly after, if it still holds exactly what was pasted (mirrors the existing copy-to-clipboard auto-clear logic).
+Long entropy hex string in the verify result no longer overflows off-screen (word-break/overflow-wrap added).
+Verify button now fails closed if the wordlist/self-test integrity check hasn't passed, matching the existing behavior of the Generate button.
+Removed a stray checked attribute on the clipboard toggle checkbox that contradicted its actual (off-by-default) runtime state.
+
 ## v1.1.6
 
 ### Added
