@@ -53,12 +53,13 @@ Full scope & reporting policy: see SECURITY.md.
 
 1. **Air-gap your device:** Disconnect from the internet.
 2. Open `index.html` in any modern browser.
-3. Wait for the green "✅ Wordlist + self-tests verified" pill to appear.
-4. Select your desired word count (12–24 words).
-5. Roll a physical 6-sided die and enter the numbers into the input field.
-6. Tap the 🔬 button to watch the live rejection sampling math; enable "Advanced" to also see the live chi-squared and autocorrelation die-fairness checks once you've entered 30+ rolls.
-7. Once you hit the target roll count, tap **Generate Seed**.
-8. Write down your phrase, tap **Clear / Reset**, and power off the device.
+3. **Browsers label locally-opened files 'not secure' because there is no TLS certificate — expected, and irrelevant: the tool performs no network activity. Your secrets never traverse a connection. Integrity is established by the SHA-256 sidecar and signed releases; local hygiene (air-gap, auto-clear, clipboard discipline) is your protection, not HTTPS.**
+4. Wait for the green "✅ Wordlist + self-tests verified" pill to appear.
+5. Select your desired word count (12–24 words).
+6. Roll a physical 6-sided die and enter the numbers into the input field.
+7. Tap the 🔬 button to watch the live rejection sampling math; enable "Advanced" to also see the live chi-squared and autocorrelation die-fairness checks once you've entered 30+ rolls.
+8. Once you hit the target roll count, tap **Generate Seed**.
+9. Write down your phrase, tap **Clear / Reset**, and power off the device.
 
 > 🌐 A live demo is available at <https://ianmclo.github.io/bip-39-dice/> for evaluation only. For real seed generation, use the downloaded,
 > checksum-verified file on an air-gapped device.
