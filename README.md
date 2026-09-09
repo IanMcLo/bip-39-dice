@@ -18,7 +18,40 @@ Built for security purists: this tool uses **exact rejection sampling** to reduc
   <img src="photos/Screenshots-audit.jpg" width="300" />
 </p>
 
-- **Live Die-Fairness Checks (v1.1.6, Advanced):** With the Audit Terminal's "Advanced" toggle enabled, it also runs a chi-squared goodness-of-fit test on the six observed face counts and a lag-1 autocorrelation test for sequential patterns, each showing ✔️ or ⚠️ once at least 30 rolls have been entered. These are diagnostics about the physical dice, not the entropy math — **informational only**, gated behind Advanced like the rest of the raw math, and the accept/reject decision is unaffected either way.
+
+##  Live Physical Die-Fairness Diagnostics (Advanced Settings)
+
+Once at least 30 rolls are entered with the "Advanced" toggle enabled, the application analyzes the physical randomness of your dice to ensure the hardware isn't defective, weighted, or rolled predictably.
+
+---
+
+* **Chi-Squared Goodness-of-Fit Test ($\chi^2$)**
+  * **What it tests:** Checks whether the observed distribution of die faces ($1$ through $6$) deviates significantly from a fair, uniform probability ($P = \frac{1}{6} \approx 16.67\%$ per face).
+  * **Mathematical Formula:** 
+    $$\chi^2 = \sum_{i=1}^{k} \frac{(O_i - E_i)^2}{E_i}$$
+    Where $k = 6$ represents the faces, $O_i$ is the observed count of face $i$, and $E_i = \frac{N}{6}$ is the expected count for $N$ total rolls.
+  * **Threshold:** Evaluated at $5$ degrees of freedom ($\text{df} = k - 1 = 5$). If $\chi^2 \le 11.07$, the distribution is statistically consistent with a fair die at a $95\%$ confidence level ($\alpha = 0.05$).
+  * **Terminal Output:** Displays individual face distributions `faces[1-6]=15,19,19,16,18,18` alongside the pass verdict:  
+    `✓ χ² ≤ 11.07 – no bias detected`
+
+---
+
+* **Lag-1 Autocorrelation Test**
+  * **What it tests:** Detects sequential patterns or physical habits between consecutive rolls (e.g., if throwing a $6$ makes rolling a $1$ immediately after more likely due to hand mechanics or rolling style).
+  * **Mathematical Formula:** Calculates the sample autocorrelation coefficient ($r$) for a lag of $1$ across $n = N - 1$ consecutive pairs $(X_t, X_{t+1})$:
+    $$r = \frac{\sum_{t=1}^{N-1} (X_t - \bar{X})(X_{t+1} - \bar{X})}{\sum_{t=1}^{N} (X_t - \bar{X})^2}$$
+    The test then converts $r$ into a standardized normal $Z$-score to measure significance:
+    $$Z = r \sqrt{N - 1}$$
+  * **Threshold:** If $|Z| \le 1.96$, there is no statistically significant sequential correlation at the $95\%$ confidence interval ($\alpha = 0.05$).
+  * **Terminal Output:** Displays the raw correlation value and $Z$-score (e.g., `lag-1 autocorr r=-0.049 z=-0.50 (n=104 pairs)`) alongside the pass verdict:  
+    `✓ |z| ≤ 1.96 – no sequential correlation detected`
+
+---
+
+> **Note:** These statistical tests are strictly **informational diagnostics** regarding the physical quality of your dice. The underlying cryptographic rejection sampling (**Zero Modulo Bias**) operates independently to guarantee mathematical uniformity regardless of diagnostic outcomes.
+
+---
+
 - **On-Load Self-Tests (Fail-Closed):** Every page load verifies the SHA-256 implementation, the official BIP-39 wordlist hash, the roll-to-entropy packing, and 4 official BIP-39 test vectors. If any test fails, the Generate button is disabled.
 - **Enhanced Entropy Buffers:** Minimum roll requirements have been increased by +1 across all tiers to maximize the cryptographic safety margin:
   * **12 words:** 55 rolls (~142 bits raw)
