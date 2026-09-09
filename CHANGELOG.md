@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.8
+
+### Added
+
+- **Added a Content-Security-Policy meta tag** (default-src 'self' 'unsafe-inline'; connect-src 'none') to block loading of any external scripts, styles, or resources and to prevent all outbound network requests from the page.
+*Release File hash: 1ee899179701d0757d1c9adf9de9dde08d1450d5289cbefe781b8e3f111734e2*
+  
+
 ## v1.1.7
 
 ### Added
