@@ -75,6 +75,21 @@ sha256sum -c index.html.sha256
 
 **Option 2: Manual Hash** Hash your local `index.html` file using any trusted SHA-256 tool and compare it against the published hash in `index.html.sha256`.
 
+**Option 3: SSH Signature (strongest — verifies the artifact directly)**
+Download `index.html.sig` alongside `index.html`, then verify it against
+the signing key published at `github.com/IanMcLo.keys`:
+
+    curl -s https://github.com/IanMcLo.keys | \
+      awk '{print "IanMcLo@users.noreply.github.com " $0}' > allowed_signers
+
+    ssh-keygen -Y verify -f allowed_signers \
+      -I IanMcLo@users.noreply.github.com -n file \
+      -s index.html.sig < index.html
+
+    # Expected output: Good "file" signature for
+    # IanMcLo@users.noreply.github.com with ED25519 key
+    # SHA256:6D+lcVxQsXH+3QK+x6luF5L7tdjajExZSKGJQuPcqZo
+
 ## Provenance & Signed Releases
 
 Release tags (September 2026 onward) are signed with the account SSH
